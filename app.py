@@ -254,27 +254,45 @@ HTML_TEMPLATE = """
                     <div class="text-sm font-bold text-white truncate">{{ next_station|default('---') }}</div>
                     <div class="w-full bg-slate-700 h-1 mt-1 rounded"><div class="bg-green-500 h-1 rounded" style="width: {{ progress|default(0) }}%"></div></div>
                 </div>
-                <div class="flex-grow flex items-center justify-center relative">
+                <div class="flex-grow flex flex-col items-center justify-center relative">
                     <canvas id="speedometer" width="200" height="200" class="max-w-full max-h-full"></canvas>
-                    <div class="absolute bottom-0 text-center">
+                    <div class="absolute bottom-8 text-center">
                         <div class="digital-font text-2xl text-cyan-400" id="speedDisplay">0</div>
                         <div class="text-[8px] text-slate-500">km/h</div>
+                    </div>
+                    
+                    <!-- ★追加ギミック: 運転状態インジケーター -->
+                    <div class="flex gap-1 mt-1">
+                        <div id="ind-p" class="w-3 h-3 rounded-full bg-slate-800 border border-slate-600 flex items-center justify-center text-[6px] text-slate-400 font-bold transition-colors">P</div>
+                        <div id="ind-n" class="w-3 h-3 rounded-full bg-green-500 border border-green-400 flex items-center justify-center text-[6px] text-black font-bold shadow-[0_0_5px_rgba(34,197,94,0.8)] transition-colors">N</div>
+                        <div id="ind-b" class="w-3 h-3 rounded-full bg-slate-800 border border-slate-600 flex items-center justify-center text-[6px] text-slate-400 font-bold transition-colors">B</div>
                     </div>
                 </div>
                 <div class="absolute top-1 right-1 text-xs" id="weatherIcon">☀️</div>
             </div>
 
             <!-- 右パネル（クイズ - メイン領域） -->
-            <!-- ★修正ポイント: h-full を追加してパネルの高さを親に合わせる。min-h-0 で縮小可能にする。 -->
-            <div class="flex-1 glass-panel rounded-lg p-2 flex flex-col relative monitor-scanline overflow-y-auto custom-scrollbar h-full min-h-0">
+            <!-- ★修正: スクロール制御を親ではなく内部のdivで行うように構造変更 -->
+            <div class="flex-1 glass-panel rounded-lg p-2 flex flex-col relative monitor-scanline h-full min-h-0">
                 {% if state == 'quiz' %}
-                    <div class="flex flex-col min-h-full">
+                    <!-- ★緊急停止ボタン: 右上に移動し、z-indexを上げて確実に表示 -->
+                    <div class="absolute top-2 right-3 z-50">
+                        <form action="/emergency_stop" method="post" onsubmit="return confirm('緊急停止しますか？ひとつ前ののぞみ停車駅に戻ります。');">
+                            <button type="submit" class="bg-red-600/90 hover:bg-red-500 text-white text-[10px] font-bold py-1 px-2 rounded shadow-md border border-red-400 animate-pulse">
+                                🚨 STOP
+                            </button>
+                        </form>
+                    </div>
+
+                    <!-- ★スクロールコンテナ: ここでスクロールさせる -->
+                    <!-- 上部に余白(pt-8)を作ってボタンと重ならないようにする -->
+                    <div class="flex-grow overflow-y-auto custom-scrollbar flex flex-col relative pb-4 pt-8">
                         <div class="flex-shrink-0 mb-4">
                             <div class="text-blue-300 text-[10px] font-mono">ID: {{ question.id }}</div>
                             <h2 class="text-sm md:text-base font-bold leading-snug text-white drop-shadow-md">{{ question.question }}</h2>
                         </div>
                         
-                        <form action="/answer" method="post" class="flex flex-col gap-2 flex-grow pb-8">
+                        <form action="/answer" method="post" class="flex flex-col gap-2 flex-grow">
                             <input type="hidden" name="client_speed" id="clientSpeedInput" value="0">
                             <input type="hidden" name="got_landmark" id="gotLandmarkInput" value="0">
                             {% for opt in question.options %}
@@ -382,6 +400,29 @@ HTML_TEMPLATE = """
             const landmarkLayer = document.getElementById('landmarkLayer');
             const landmarkNotify = document.getElementById('landmarkGet');
             const inputGotLandmark = document.getElementById('gotLandmarkInput');
+            
+            // ★インジケーター制御
+            const p = document.getElementById('ind-p');
+            const n = document.getElementById('ind-n');
+            const b = document.getElementById('ind-b');
+            
+            const reset = (el) => {
+                el.className = "w-3 h-3 rounded-full bg-slate-800 border border-slate-600 flex items-center justify-center text-[6px] text-slate-400 font-bold transition-colors";
+            };
+            const active = (el, colorClass, glowColor) => {
+                el.className = `w-3 h-3 rounded-full ${colorClass} border border-white/50 flex items-center justify-center text-[6px] text-black font-bold shadow-[0_0_8px_${glowColor}] transition-colors`;
+            };
+
+            if (p && n && b) {
+                reset(p); reset(n); reset(b);
+                if (Math.abs(targetSpeed - currentSpeed) < 1) {
+                    active(n, "bg-green-500", "rgba(34,197,94,0.8)"); // Neutral
+                } else if (targetSpeed > currentSpeed) {
+                    active(p, "bg-orange-500", "rgba(249,115,22,0.8)"); // Power
+                } else {
+                    active(b, "bg-red-500", "rgba(239,68,68,0.8)"); // Brake
+                }
+            }
 
             if (isTunnel) {
                 windowView.classList.add('weather-tunnel'); if(weatherIcon) weatherIcon.innerText = "🚇";
@@ -418,227 +459,3 @@ HTML_TEMPLATE = """
     </script>
 </body>
 </html>
-"""
-
-# ---------------------------------------------------------
-# 4. ルーティング & ゲームロジック
-# ---------------------------------------------------------
-
-@app.route('/')
-def index():
-    # ★修正: タイトルに戻ったら、コレクション以外のゲーム進行データをきれいサッパリ忘れるようにします！
-    keys_to_remove = ['mode', 'current_station_idx', 'next_station_idx', 'score', 
-                      'current_speed', 'question_deck', 'quiz_queue', 'current_quiz_idx', 
-                      'question_start_time', 'total_answered_count']
-    for key in keys_to_remove:
-        session.pop(key, None)
-
-    collected = session.get('collected_landmarks', [])
-    return render_template_string(HTML_TEMPLATE, state='menu', current_speed=0, all_landmarks=LANDMARK_DATA, collected=collected, total_questions=len(ALL_QUESTIONS))
-
-@app.route('/start', methods=['POST'])
-def start_game():
-    # ★修正: フォームの値に変な空白が入っていても除去して受け取るように修正
-    # デバッグ用にログを出力
-    raw_mode = request.form.get('mode')
-    print(f"DEBUG: Start Game Request Mode = '{raw_mode}'")
-    
-    if raw_mode:
-        mode = raw_mode.strip()
-    else:
-        mode = 'shinkansen' # デフォルト
-        
-    session['mode'] = mode
-    session['current_station_idx'] = 0
-    session['score'] = 0
-    session['current_speed'] = 50
-    if 'collected_landmarks' not in session: session['collected_landmarks'] = []
-
-    # ★完走型ロジックの核：問題IDの山札（Deck）を作成してシャッフル
-    deck = list(range(len(ALL_QUESTIONS)))
-    random.shuffle(deck)
-    session['question_deck'] = deck
-    session['total_answered_count'] = 0 # 累計回答数
-    
-    set_next_destination(0, mode)
-    
-    # 最初の区間の問題を取得
-    prepare_next_leg_questions()
-    
-    session['current_quiz_idx'] = 0
-    session['question_start_time'] = time.time()
-    return redirect(url_for('play'))
-
-def set_next_destination(current_idx, mode):
-    next_idx = current_idx + 1
-    if mode == 'nozomi':
-        # ★修正: のぞみロジックをより確実に。
-        # 現在地より後で、最初に「is_nozomi=True」になる駅を探す
-        found = False
-        for i in range(current_idx + 1, len(STATION_DATA)):
-            if STATION_DATA[i]['is_nozomi']:
-                next_idx = i
-                found = True
-                break
-        # もし最後まで見つからなかったら終点（新函館北斗）へ
-        if not found:
-            next_idx = len(STATION_DATA) - 1
-            
-    session['next_station_idx'] = next_idx
-
-def prepare_next_leg_questions():
-    """山札から次の区間分の問題を取り出す"""
-    mode = session.get('mode')
-    count = 7 if mode == 'shinkansen' else 28
-    
-    deck = session.get('question_deck', [])
-    
-    # デッキから取り出す（足りない場合はあるだけ取り出す）
-    num_to_take = min(count, len(deck))
-    
-    if num_to_take == 0:
-        # もう問題がない場合 -> 空リスト
-        selected_indices = []
-    else:
-        selected_indices = deck[:num_to_take]
-        session['question_deck'] = deck[num_to_take:] # デッキ更新
-        
-    # インデックスから実際の問題データを取得
-    # ★修正: Cookie容量オーバー対策のため、セッションには「問題インデックスのリスト」のみを保存する
-    session['quiz_queue'] = selected_indices
-
-@app.route('/play')
-def play():
-    if 'quiz_queue' not in session: return redirect(url_for('index'))
-    queue = session['quiz_queue'] # ここはインデックスのリスト
-    idx = session['current_quiz_idx']
-    
-    # 区間クリア判定
-    if idx >= len(queue):
-        # もしデッキも空なら、ゲームクリア（ゴール）へ
-        if len(session.get('question_deck', [])) == 0:
-             return render_template_string(HTML_TEMPLATE, state='goal', score=session['score'], total_answered=session['total_answered_count'])
-        
-        # 現在の駅が「のぞみ停車駅」かどうかを判定してテンプレートへ渡す
-        current_station_data = STATION_DATA[session['next_station_idx']]
-        is_nozomi_station = current_station_data['is_nozomi']
-
-        return render_template_string(HTML_TEMPLATE, 
-            state='station_arrival',
-            current_station=current_station_data['name'],
-            score=session['score'], current_speed=0, total_questions=len(ALL_QUESTIONS), total_answered=session['total_answered_count'],
-            is_nozomi_station=is_nozomi_station
-        )
-    
-    current_st_idx = session['current_station_idx']
-    landmark = LANDMARK_DATA.get(current_st_idx)
-    session['question_start_time'] = time.time()
-    
-    # ★修正: インデックスを使ってマスターデータから問題を取得
-    q_index = queue[idx]
-    current_question = ALL_QUESTIONS[q_index]
-
-    # ★ 追加: 超特急のぞみモードなら、選択肢を2択にする（3つ消す）
-    disabled_indices = []
-    if session.get('mode') == 'nozomi':
-        # 正解のインデックス(0始まり)を取得
-        correct_idx_zero = current_question['answer_idx'] - 1
-        # 正解以外のインデックス(0-4)のリストを作成
-        others = [i for i in range(5) if i != correct_idx_zero]
-        # その中からランダムに3つ選ぶ
-        disabled_indices = random.sample(others, 3)
-
-    return render_template_string(HTML_TEMPLATE,
-        state='quiz',
-        question=current_question,
-        mode_label="各駅停車" if session['mode'] == 'shinkansen' else "超特急のぞみ",
-        current_station=STATION_DATA[current_st_idx]['name'],
-        next_station=STATION_DATA[session['next_station_idx']]['name'],
-        score=session['score'],
-        progress=(idx / len(queue)) * 100,
-        current_speed=session.get('current_speed', 100),
-        landmark=landmark,
-        total_questions=len(ALL_QUESTIONS),
-        total_answered=session['total_answered_count'] + 1,
-        disabled_indices=disabled_indices
-    )
-
-@app.route('/answer', methods=['POST'])
-def answer():
-    choice = int(request.form.get('choice'))
-    client_speed = int(request.form.get('client_speed', 0))
-    got_landmark_flag = request.form.get('got_landmark', '0')
-    queue = session['quiz_queue']
-    idx = session['current_quiz_idx']
-    
-    # ★修正: インデックスから問題を取得
-    q_index = queue[idx]
-    current_q = ALL_QUESTIONS[q_index]
-    
-    elapsed = time.time() - session.get('question_start_time', time.time())
-    is_correct = (choice == current_q['answer_idx'])
-    current_speed = client_speed
-    
-    if is_correct:
-        session['score'] += 1
-        speed_bonus = max(10, 50 - (elapsed * 2))
-        current_speed = min(320, current_speed + speed_bonus)
-    else:
-        current_speed = max(30, current_speed - 50)
-        # ★修正: 不正解なら問題をキューの末尾に追加（再出題） - インデックスを追加
-        queue.append(q_index)
-        session['quiz_queue'] = queue
-    
-    session['current_speed'] = current_speed
-    session['total_answered_count'] += 1 # 回答済みカウントアップ
-
-    landmark_info = LANDMARK_DATA.get(session['current_station_idx'])
-    if landmark_info and got_landmark_flag == "1":
-        collected = session.get('collected_landmarks', [])
-        l_id = str(session['current_station_idx'])
-        if l_id not in collected:
-            collected.append(l_id)
-            session['collected_landmarks'] = collected
-
-    return render_template_string(HTML_TEMPLATE,
-        state='judgement',
-        is_correct=is_correct,
-        correct_answer_text=current_q['options'][current_q['answer_idx']-1],
-        current_speed=current_speed,
-        total_questions=len(ALL_QUESTIONS),
-        total_answered=session['total_answered_count']
-    )
-
-@app.route('/next', methods=['POST'])
-def next_question():
-    session['current_quiz_idx'] += 1
-    return redirect(url_for('play'))
-
-@app.route('/depart', methods=['POST'])
-def depart():
-    # ★モード変更の処理（フォームから送信された場合のみ更新）
-    new_mode = request.form.get('mode')
-    if new_mode:
-        session['mode'] = new_mode
-
-    current_idx = session['next_station_idx']
-    session['current_station_idx'] = current_idx
-    
-    # 終点チェック or 問題切れチェック
-    deck_is_empty = (len(session.get('question_deck', [])) == 0)
-    
-    if current_idx >= len(STATION_DATA) - 1 or deck_is_empty:
-        return render_template_string(HTML_TEMPLATE, state='goal', score=session['score'], total_answered=session['total_answered_count'])
-    
-    # 更新されたモードで次の目的地を設定
-    set_next_destination(current_idx, session['mode'])
-    
-    # 次の問題セット補充（デッキから引く）
-    prepare_next_leg_questions()
-    
-    session['current_quiz_idx'] = 0
-    session['current_speed'] = 100
-    return redirect(url_for('play'))
-
-if __name__ == '__main__':
-    app.run(debug=True)
