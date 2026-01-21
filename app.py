@@ -459,3 +459,249 @@ HTML_TEMPLATE = """
     </script>
 </body>
 </html>
+"""
+
+# ---------------------------------------------------------
+# 4. ルーティング & ゲームロジック
+# ---------------------------------------------------------
+
+@app.route('/')
+def index():
+    # ★修正: タイトルに戻ったら、コレクション以外のゲーム進行データをきれいサッパリ忘れるようにします！
+    keys_to_remove = ['mode', 'current_station_idx', 'next_station_idx', 'score', 
+                      'current_speed', 'question_deck', 'quiz_queue', 'current_quiz_idx', 
+                      'question_start_time', 'total_answered_count']
+    for key in keys_to_remove:
+        session.pop(key, None)
+
+    collected = session.get('collected_landmarks', [])
+    return render_template_string(HTML_TEMPLATE, state='menu', current_speed=0, all_landmarks=LANDMARK_DATA, collected=collected, total_questions=len(ALL_QUESTIONS))
+
+@app.route('/start', methods=['POST'])
+def start_game():
+    # ★修正: フォームの値に変な空白が入っていても除去して受け取るように修正
+    # デバッグ用にログを出力
+    raw_mode = request.form.get('mode')
+    print(f"DEBUG: Start Game Request Mode = '{raw_mode}'")
+    
+    if raw_mode:
+        mode = raw_mode.strip()
+    else:
+        mode = 'shinkansen' # デフォルト
+        
+    session['mode'] = mode
+    session['current_station_idx'] = 0
+    session['score'] = 0
+    session['current_speed'] = 50
+    if 'collected_landmarks' not in session: session['collected_landmarks'] = []
+
+    # ★完走型ロジックの核：問題IDの山札（Deck）を作成してシャッフル
+    deck = list(range(len(ALL_QUESTIONS)))
+    random.shuffle(deck)
+    session['question_deck'] = deck
+    session['total_answered_count'] = 0 # 累計回答数
+    
+    set_next_destination(0, mode)
+    
+    # 最初の区間の問題を取得
+    prepare_next_leg_questions()
+    
+    session['current_quiz_idx'] = 0
+    session['question_start_time'] = time.time()
+    return redirect(url_for('play'))
+
+def set_next_destination(current_idx, mode):
+    next_idx = current_idx + 1
+    if mode == 'nozomi':
+        # ★修正: のぞみロジックをより確実に。
+        # 現在地より後で、最初に「is_nozomi=True」になる駅を探す
+        found = False
+        for i in range(current_idx + 1, len(STATION_DATA)):
+            if STATION_DATA[i]['is_nozomi']:
+                next_idx = i
+                found = True
+                break
+        # もし最後まで見つからなかったら終点（新函館北斗）へ
+        if not found:
+            next_idx = len(STATION_DATA) - 1
+            
+    session['next_station_idx'] = next_idx
+
+def prepare_next_leg_questions():
+    """山札から次の区間分の問題を取り出す"""
+    mode = session.get('mode')
+    count = 7 if mode == 'shinkansen' else 28
+    
+    deck = session.get('question_deck', [])
+    
+    # デッキから取り出す（足りない場合はあるだけ取り出す）
+    num_to_take = min(count, len(deck))
+    
+    if num_to_take == 0:
+        # もう問題がない場合 -> 空リスト
+        selected_indices = []
+    else:
+        selected_indices = deck[:num_to_take]
+        session['question_deck'] = deck[num_to_take:] # デッキ更新
+        
+    # インデックスから実際の問題データを取得
+    # ★修正: Cookie容量オーバー対策のため、セッションには「問題インデックスのリスト」のみを保存する
+    session['quiz_queue'] = selected_indices
+
+@app.route('/play')
+def play():
+    if 'quiz_queue' not in session: return redirect(url_for('index'))
+    queue = session['quiz_queue'] # ここはインデックスのリスト
+    idx = session['current_quiz_idx']
+    
+    # 区間クリア判定
+    if idx >= len(queue):
+        # もしデッキも空なら、ゲームクリア（ゴール）へ
+        if len(session.get('question_deck', [])) == 0:
+             return render_template_string(HTML_TEMPLATE, state='goal', score=session['score'], total_answered=session['total_answered_count'])
+        
+        # 現在の駅が「のぞみ停車駅」かどうかを判定してテンプレートへ渡す
+        current_station_data = STATION_DATA[session['next_station_idx']]
+        is_nozomi_station = current_station_data['is_nozomi']
+
+        return render_template_string(HTML_TEMPLATE, 
+            state='station_arrival',
+            current_station=current_station_data['name'],
+            score=session['score'], current_speed=0, total_questions=len(ALL_QUESTIONS), total_answered=session['total_answered_count'],
+            is_nozomi_station=is_nozomi_station
+        )
+    
+    current_st_idx = session['current_station_idx']
+    landmark = LANDMARK_DATA.get(current_st_idx)
+    session['question_start_time'] = time.time()
+    
+    # ★修正: インデックスを使ってマスターデータから問題を取得
+    q_index = queue[idx]
+    current_question = ALL_QUESTIONS[q_index]
+
+    # ★ 追加: 超特急のぞみモードなら、選択肢を2択にする（3つ消す）
+    disabled_indices = []
+    if session.get('mode') == 'nozomi':
+        # 正解のインデックス(0始まり)を取得
+        correct_idx_zero = current_question['answer_idx'] - 1
+        # 正解以外のインデックス(0-4)のリストを作成
+        others = [i for i in range(5) if i != correct_idx_zero]
+        # その中からランダムに3つ選ぶ
+        disabled_indices = random.sample(others, 3)
+
+    return render_template_string(HTML_TEMPLATE,
+        state='quiz',
+        question=current_question,
+        mode_label="各駅停車" if session['mode'] == 'shinkansen' else "超特急のぞみ",
+        current_station=STATION_DATA[current_st_idx]['name'],
+        next_station=STATION_DATA[session['next_station_idx']]['name'],
+        score=session['score'],
+        progress=(idx / len(queue)) * 100,
+        current_speed=session.get('current_speed', 100),
+        landmark=landmark,
+        total_questions=len(ALL_QUESTIONS),
+        total_answered=session['total_answered_count'] + 1,
+        disabled_indices=disabled_indices
+    )
+
+@app.route('/answer', methods=['POST'])
+def answer():
+    choice = int(request.form.get('choice'))
+    client_speed = int(request.form.get('client_speed', 0))
+    got_landmark_flag = request.form.get('got_landmark', '0')
+    queue = session['quiz_queue']
+    idx = session['current_quiz_idx']
+    
+    # ★修正: インデックスから問題を取得
+    q_index = queue[idx]
+    current_q = ALL_QUESTIONS[q_index]
+    
+    elapsed = time.time() - session.get('question_start_time', time.time())
+    is_correct = (choice == current_q['answer_idx'])
+    current_speed = client_speed
+    
+    if is_correct:
+        session['score'] += 1
+        speed_bonus = max(10, 50 - (elapsed * 2))
+        current_speed = min(320, current_speed + speed_bonus)
+    else:
+        current_speed = max(30, current_speed - 50)
+        # ★修正: 不正解なら問題をキューの末尾に追加（再出題） - インデックスを追加
+        queue.append(q_index)
+        session['quiz_queue'] = queue
+    
+    session['current_speed'] = current_speed
+    session['total_answered_count'] += 1 # 回答済みカウントアップ
+
+    landmark_info = LANDMARK_DATA.get(session['current_station_idx'])
+    if landmark_info and got_landmark_flag == "1":
+        collected = session.get('collected_landmarks', [])
+        l_id = str(session['current_station_idx'])
+        if l_id not in collected:
+            collected.append(l_id)
+            session['collected_landmarks'] = collected
+
+    return render_template_string(HTML_TEMPLATE,
+        state='judgement',
+        is_correct=is_correct,
+        correct_answer_text=current_q['options'][current_q['answer_idx']-1],
+        current_speed=current_speed,
+        total_questions=len(ALL_QUESTIONS),
+        total_answered=session['total_answered_count']
+    )
+
+@app.route('/next', methods=['POST'])
+def next_question():
+    session['current_quiz_idx'] += 1
+    return redirect(url_for('play'))
+
+@app.route('/depart', methods=['POST'])
+def depart():
+    # ★モード変更の処理（フォームから送信された場合のみ更新）
+    new_mode = request.form.get('mode')
+    if new_mode:
+        session['mode'] = new_mode
+
+    current_idx = session['next_station_idx']
+    session['current_station_idx'] = current_idx
+    
+    # 終点チェック or 問題切れチェック
+    deck_is_empty = (len(session.get('question_deck', [])) == 0)
+    
+    if current_idx >= len(STATION_DATA) - 1 or deck_is_empty:
+        return render_template_string(HTML_TEMPLATE, state='goal', score=session['score'], total_answered=session['total_answered_count'])
+    
+    # 更新されたモードで次の目的地を設定
+    set_next_destination(current_idx, session['mode'])
+    
+    # 次の問題セット補充（デッキから引く）
+    prepare_next_leg_questions()
+    
+    session['current_quiz_idx'] = 0
+    session['current_speed'] = 100
+    return redirect(url_for('play'))
+
+# ★緊急停止機能（リタイヤ）を追加
+@app.route('/emergency_stop', methods=['POST'])
+def emergency_stop():
+    current_idx = session.get('current_station_idx', 0)
+    
+    # 現在地より手前（過去）の「のぞみ停車駅」を探す
+    target_idx = 0 # 見つからなければ始発駅
+    for i in range(current_idx, -1, -1):
+        if STATION_DATA[i]['is_nozomi']:
+            target_idx = i
+            break
+            
+    # 強制的にその駅に到着した状態にする
+    session['next_station_idx'] = target_idx
+    
+    # 現在のクイズキューを強制的に終了状態にするため、インデックスを大きくする
+    session['current_quiz_idx'] = 9999
+    
+    # play() にリダイレクトすると、区間クリア判定 (idx >= len(queue)) に引っかかり、
+    # target_idx (戻った先の駅) への到着画面が表示される
+    return redirect(url_for('play'))
+
+if __name__ == '__main__':
+    app.run(debug=True)
