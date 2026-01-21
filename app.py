@@ -96,7 +96,7 @@ HTML_TEMPLATE = """
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>新幹線でGO! 日本縦断ドリル</title>
+    <title>新幹線でGO! 日本縦断・国試必須問題ドリル</title>
     <script src="https://cdn.tailwindcss.com"></script>
 </head>
 <body class="bg-slate-100 text-slate-800 font-sans min-h-screen">
@@ -127,7 +127,7 @@ HTML_TEMPLATE = """
                 <div class="flex justify-center mb-6 text-blue-600">
                     <svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="16" height="16" x="4" y="4" rx="2"/><path d="M4 11h16"/><path d="M12 4v16"/><path d="m8 8 2 2-2 2"/><path d="m16 8-2 2 2 2"/></svg>
                 </div>
-                <h1 class="text-2xl font-bold mb-2 text-blue-900">新幹線でGO!<br>日本縦断ドリル</h1>
+                <h1 class="text-2xl font-bold mb-2 text-blue-900">新幹線でGO!<br>日本縦断<br>国試必須問題ドリル</h1>
                 <p class="text-slate-500 mb-8 text-sm">全493問の旅へ出発進行！</p>
                 
                 <form action="/start" method="post" class="space-y-4">
@@ -135,7 +135,7 @@ HTML_TEMPLATE = """
                         <div class="flex justify-between items-center">
                             <div>
                                 <div class="text-lg">各駅停車モード</div>
-                                <div class="text-xs opacity-80">じっくり学習 (1区間 3問)</div>
+                                <div class="text-xs opacity-80">じっくり学習 (1区間 7問)</div>
                             </div>
                             <span>▶</span>
                         </div>
@@ -144,7 +144,7 @@ HTML_TEMPLATE = """
                         <div class="flex justify-between items-center">
                             <div>
                                 <div class="text-lg">のぞみ急行モード</div>
-                                <div class="text-xs opacity-80">一気に北上 (1区間 5問)</div>
+                                <div class="text-xs opacity-80">一気に北上 (1区間 28問)</div>
                             </div>
                             <span>▶</span>
                         </div>
@@ -252,8 +252,8 @@ def start_game():
     session['score'] = 0
     set_next_destination(0, mode)
     
-    # 問題セットを準備
-    questions_per_leg = 3 if mode == 'shinkansen' else 5
+    # 問題セットを準備（仕様書に基づき更新）
+    questions_per_leg = 7 if mode == 'shinkansen' else 28
     
     # エラー時は1問だけにする（無限ループ防止）
     if len(ALL_QUESTIONS) == 1 and ALL_QUESTIONS[0]['id'] == 'ERROR':
@@ -326,7 +326,9 @@ def depart():
         return render_template_string(HTML_TEMPLATE, state='goal', score=session['score'])
     
     set_next_destination(current_idx, session['mode'])
-    questions_per_leg = 3 if session['mode'] == 'shinkansen' else 5
+    
+    # 問題セットを更新（仕様書に基づき更新）
+    questions_per_leg = 7 if session['mode'] == 'shinkansen' else 28
     
     if len(ALL_QUESTIONS) == 1 and ALL_QUESTIONS[0]['id'] == 'ERROR':
         selected_questions = ALL_QUESTIONS
