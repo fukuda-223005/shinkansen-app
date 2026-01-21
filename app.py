@@ -105,13 +105,23 @@ HTML_TEMPLATE = """
 <html lang="ja">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>新幹線でGO! 日本縦断完走ドリル</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Zen+Kaku+Gothic+New:wght@500;700&display=swap');
         
-        body { font-family: 'Zen Kaku Gothic New', sans-serif; overflow: hidden; background: #1a1a1a; }
+        /* ★重要: iPhoneのDynamic Viewport Heightに対応し、スクロール禁止をbodyのみに適用 */
+        body { 
+            font-family: 'Zen Kaku Gothic New', sans-serif; 
+            background: #1a1a1a;
+            height: 100vh; /* Fallback */
+            height: 100dvh; /* Mobile Safari fix */
+            width: 100vw;
+            overflow: hidden; /* アプリ全体のスクロールを防ぐ */
+            overscroll-behavior-y: none; /* バウンススクロール防止 */
+            padding-bottom: env(safe-area-inset-bottom); /* iPhone下部バー対策 */
+        }
         .digital-font { font-family: 'Share Tech Mono', monospace; }
         
         /* 車窓アニメーション */
@@ -171,8 +181,8 @@ HTML_TEMPLATE = """
 </head>
 <body class="text-white h-screen flex flex-col">
 
-    <!-- 1. フロントガラス -->
-    <div class="window-view flex-grow relative" id="windowView">
+    <!-- 1. フロントガラス（上部 35%） -->
+    <div class="window-view relative flex-shrink-0" style="height: 35%;" id="windowView">
         <div class="scenery-layer layer-mountains" id="layerMountains"></div>
         <div class="scenery-layer layer-buildings" id="layerBuildings"></div>
         {% if landmark %}
@@ -188,29 +198,29 @@ HTML_TEMPLATE = """
         </div>
 
         {% if state == 'menu' %}
-        <div class="absolute inset-0 flex items-center justify-center bg-black/50 backdrop-blur-sm z-20">
-            <div class="bg-white/90 text-slate-900 p-8 rounded-2xl shadow-2xl max-w-lg text-center border-4 border-blue-600 overflow-y-auto max-h-[90vh]">
-                <h1 class="text-3xl font-black mb-2 text-blue-800 tracking-tighter italic transform -skew-x-6">SHINKANSEN GO!</h1>
-                <p class="font-bold text-slate-600 mb-6">日本縦断・国試必須問題ドリル</p>
-                <form action="/start" method="post" class="space-y-4 mb-8">
-                    <button name="mode" value="shinkansen" class="w-full bg-blue-600 hover:bg-blue-500 text-white font-bold py-3 px-6 rounded shadow-lg transform transition hover:scale-105">
+        <div class="absolute inset-0 flex items-center justify-center bg-black/50 backdrop-blur-sm z-20 p-4">
+            <div class="bg-white/90 text-slate-900 p-6 rounded-2xl shadow-2xl w-full max-w-lg text-center border-4 border-blue-600 overflow-y-auto max-h-full">
+                <h1 class="text-2xl md:text-3xl font-black mb-2 text-blue-800 tracking-tighter italic transform -skew-x-6">SHINKANSEN GO!</h1>
+                <p class="font-bold text-slate-600 mb-6 text-sm">日本縦断・国試必須問題ドリル</p>
+                <form action="/start" method="post" class="space-y-3 mb-6">
+                    <button name="mode" value="shinkansen" class="w-full bg-blue-600 hover:bg-blue-500 text-white font-bold py-3 px-4 rounded shadow-lg transform transition active:scale-95">
                         <div class="pointer-events-none">各駅停車モード (7問/区間)</div>
                         <div class="text-xs opacity-75 font-normal pointer-events-none">じっくり確実に進むならこちら</div>
                     </button>
-                    <button name="mode" value="nozomi" class="w-full bg-yellow-500 hover:bg-yellow-400 text-slate-900 font-bold py-3 px-6 rounded shadow-lg transform transition hover:scale-105">
+                    <button name="mode" value="nozomi" class="w-full bg-yellow-500 hover:bg-yellow-400 text-slate-900 font-bold py-3 px-4 rounded shadow-lg transform transition active:scale-95">
                         <div class="pointer-events-none">超特急のぞみモード (28問/区間)</div>
                         <div class="text-xs opacity-75 font-normal pointer-events-none">大量の問題を高速処理！</div>
                     </button>
                 </form>
-                <div class="border-t border-slate-300 pt-4">
-                    <h3 class="text-sm font-bold text-slate-500 mb-3">旅の思い出コレクション</h3>
+                <div class="border-t border-slate-300 pt-3">
+                    <h3 class="text-xs font-bold text-slate-500 mb-2">旅の思い出コレクション</h3>
                     <div class="grid grid-cols-4 gap-2">
                         {% for l_id, l_data in all_landmarks.items() %}
                             <div class="aspect-square rounded border {{ 'bg-yellow-100 border-yellow-400' if l_id|string in collected else 'bg-slate-200 border-slate-300' }} flex flex-col items-center justify-center p-1">
                                 {% if l_id|string in collected %}
-                                    <div class="w-8 h-8 overflow-hidden">{{ l_data.svg | safe }}</div>
-                                    <div class="text-[10px] font-bold mt-1 text-slate-800">{{ l_data.name }}</div>
-                                {% else %}<div class="text-2xl text-slate-400">🔒</div>{% endif %}
+                                    <div class="w-6 h-6 overflow-hidden">{{ l_data.svg | safe }}</div>
+                                    <div class="text-[8px] font-bold mt-1 text-slate-800 truncate w-full">{{ l_data.name }}</div>
+                                {% else %}<div class="text-lg text-slate-400">🔒</div>{% endif %}
                             </div>
                         {% endfor %}
                     </div>
@@ -220,58 +230,62 @@ HTML_TEMPLATE = """
         {% endif %}
     </div>
 
-    <!-- 2. コックピット -->
-    <div class="cockpit-frame h-1/2 min-h-[400px] flex flex-col p-2 relative z-10">
-        <div class="flex justify-between items-center px-4 py-2 bg-black/40 rounded mb-2 border border-slate-600">
-            <div class="flex items-center gap-4">
-                <div class="text-xs text-slate-400">MODE</div>
-                <div class="text-yellow-400 font-bold tracking-widest">{{ mode_label|default('WAITING') }}</div>
+    <!-- 2. コックピット（下部 65% - クイズ領域確保） -->
+    <div class="cockpit-frame flex flex-col p-2 relative z-10" style="height: 65%;">
+        <!-- ヘッダー情報 -->
+        <div class="flex justify-between items-center px-3 py-1 bg-black/40 rounded mb-2 border border-slate-600 flex-shrink-0">
+            <div class="flex items-center gap-2">
+                <div class="text-[10px] text-slate-400">MODE</div>
+                <div class="text-yellow-400 font-bold tracking-widest text-sm">{{ mode_label|default('WAITING') }}</div>
             </div>
-            <div class="flex items-center gap-4">
-                <div class="text-xs text-slate-400">PROGRESS</div>
-                <div class="digital-font text-xl text-green-400">{{ total_answered|default(0) }} / {{ total_questions }} 問</div>
+            <div class="flex items-center gap-2">
+                <div class="text-[10px] text-slate-400">PROGRESS</div>
+                <div class="digital-font text-lg text-green-400">{{ total_answered|default(0) }} / {{ total_questions }}</div>
             </div>
         </div>
 
-        <div class="flex flex-grow gap-2">
-            <!-- 左パネル -->
-            <div class="w-1/3 glass-panel rounded-lg p-2 flex flex-col relative">
-                <div class="text-xs text-blue-300 mb-1 border-b border-blue-900/50 pb-1">STATUS MONITOR</div>
-                <div class="mb-4">
-                    <div class="text-[10px] text-slate-400">NEXT STATION</div>
-                    <div class="text-xl font-bold text-white truncate">{{ next_station|default('---') }}</div>
+        <!-- ★修正ポイント: min-h-0 を追加して、親コンテナの高さを強制的に守らせる -->
+        <div class="flex flex-grow gap-2 overflow-hidden min-h-0">
+            <!-- 左パネル（計器類 - 幅固定・小さめ） -->
+            <div class="w-1/3 max-w-[120px] glass-panel rounded-lg p-2 flex flex-col relative flex-shrink-0">
+                <div class="text-[10px] text-blue-300 mb-1 border-b border-blue-900/50 pb-1 text-center">MONITOR</div>
+                <div class="mb-2">
+                    <div class="text-[8px] text-slate-400">NEXT</div>
+                    <div class="text-sm font-bold text-white truncate">{{ next_station|default('---') }}</div>
                     <div class="w-full bg-slate-700 h-1 mt-1 rounded"><div class="bg-green-500 h-1 rounded" style="width: {{ progress|default(0) }}%"></div></div>
                 </div>
                 <div class="flex-grow flex items-center justify-center relative">
                     <canvas id="speedometer" width="200" height="200" class="max-w-full max-h-full"></canvas>
                     <div class="absolute bottom-0 text-center">
-                        <div class="digital-font text-4xl text-cyan-400" id="speedDisplay">0</div>
-                        <div class="text-[10px] text-slate-500">km/h</div>
+                        <div class="digital-font text-2xl text-cyan-400" id="speedDisplay">0</div>
+                        <div class="text-[8px] text-slate-500">km/h</div>
                     </div>
                 </div>
-                <div class="absolute top-2 right-2 text-xs" id="weatherIcon">☀️</div>
+                <div class="absolute top-1 right-1 text-xs" id="weatherIcon">☀️</div>
             </div>
 
-            <!-- 右パネル -->
-            <div class="w-2/3 glass-panel rounded-lg p-4 flex flex-col relative monitor-scanline">
+            <!-- 右パネル（クイズ - メイン領域） -->
+            <!-- ★修正ポイント: h-full を追加してパネルの高さを親に合わせる。min-h-0 で縮小可能にする。 -->
+            <div class="flex-1 glass-panel rounded-lg p-2 flex flex-col relative monitor-scanline overflow-y-auto custom-scrollbar h-full min-h-0">
                 {% if state == 'quiz' %}
-                    <div class="flex-grow flex flex-col justify-center h-full">
-                        <div class="text-blue-300 text-xs mb-2 font-mono">ID: {{ question.id }}</div>
-                        <h2 class="text-lg md:text-xl font-bold leading-relaxed text-white mb-4 drop-shadow-md">{{ question.question }}</h2>
-                        <!-- ★修正: max-h制限を撤廃し、flex-growで高さいっぱい使うように変更 -->
-                        <form action="/answer" method="post" class="flex flex-col gap-2 overflow-y-auto flex-grow pr-1 custom-scrollbar">
+                    <div class="flex flex-col min-h-full">
+                        <div class="flex-shrink-0 mb-4">
+                            <div class="text-blue-300 text-[10px] font-mono">ID: {{ question.id }}</div>
+                            <h2 class="text-sm md:text-base font-bold leading-snug text-white drop-shadow-md">{{ question.question }}</h2>
+                        </div>
+                        
+                        <form action="/answer" method="post" class="flex flex-col gap-2 flex-grow pb-8">
                             <input type="hidden" name="client_speed" id="clientSpeedInput" value="0">
                             <input type="hidden" name="got_landmark" id="gotLandmarkInput" value="0">
                             {% for opt in question.options %}
                             {% set is_disabled = (loop.index0 in disabled_indices) %}
-                            <!-- ★修正: パディングを py-3 から py-2 に減らし、全体をコンパクトに -->
                             <button name="choice" value="{{ loop.index }}" onclick="submitAnswer(this)"
                                 {% if is_disabled %}disabled{% endif %}
-                                class="w-full text-left px-4 py-2 rounded text-sm transition-all duration-200 group border
+                                class="w-full text-left px-3 py-3 rounded text-xs md:text-sm transition-all duration-100 group border flex-shrink-0
                                 {% if is_disabled %}
                                     bg-slate-900/50 border-slate-800 text-slate-700 cursor-not-allowed
                                 {% else %}
-                                    bg-slate-800/80 hover:bg-blue-600/50 border-slate-600 hover:border-blue-400 text-white
+                                    bg-slate-800/80 hover:bg-blue-600/50 border-slate-600 hover:border-blue-400 text-white active:bg-blue-700
                                 {% endif %}">
                                 <span class="mr-2 pointer-events-none {% if is_disabled %}invisible{% else %}text-blue-400 group-hover:text-white{% endif %}">[{{ loop.index }}]</span>
                                 <span class="pointer-events-none {% if is_disabled %}line-through opacity-30{% endif %}">{{ opt }}</span>
@@ -282,60 +296,60 @@ HTML_TEMPLATE = """
                 {% elif state == 'judgement' %}
                      <div class="flex-grow flex flex-col items-center justify-center text-center">
                         {% if is_correct %}
-                            <div class="text-green-400 text-6xl font-black mb-4 tracking-tighter drop-shadow-[0_0_10px_rgba(74,222,128,0.5)]">CLEAR</div>
-                            <div class="text-blue-200">加速します！</div>
+                            <div class="text-green-400 text-5xl font-black mb-2 tracking-tighter drop-shadow-[0_0_10px_rgba(74,222,128,0.5)]">CLEAR</div>
+                            <div class="text-blue-200 text-sm">加速します！</div>
                         {% else %}
-                            <div class="text-red-500 text-6xl font-black mb-4 tracking-tighter">WARNING</div>
-                            <div class="text-xl font-bold text-white">{{ correct_answer_text }}</div>
+                            <div class="text-red-500 text-5xl font-black mb-2 tracking-tighter">WARNING</div>
+                            <div class="text-sm font-bold text-white px-4">{{ correct_answer_text }}</div>
                              <!-- 追試メッセージ -->
-                            <div class="text-yellow-300 text-sm mt-2 font-bold animate-pulse">※この問題は再出題されます</div>
+                            <div class="text-yellow-300 text-xs mt-2 font-bold animate-pulse">※この問題は再出題されます</div>
                         {% endif %}
                         <!-- 自動遷移用フォーム (非表示) -->
                         <form id="nextForm" action="/next" method="post"></form>
-                        <div class="mt-4 text-xs text-slate-400 animate-pulse">NEXT QUESTION IN <span id="countdown">1.5</span>s...</div>
+                        <div class="mt-4 text-[10px] text-slate-400 animate-pulse">NEXT QUESTION IN <span id="countdown">1.5</span>s...</div>
                         
                         <script>
-                            // 自動遷移スクリプト
                             setTimeout(() => {
                                 document.getElementById('nextForm').submit();
                             }, 1500);
                         </script>
                     </div>
                 {% elif state == 'station_arrival' %}
-                    <div class="flex-grow flex flex-col items-center justify-center text-center">
-                        <div class="text-4xl font-bold text-yellow-400 mb-2">{{ current_station }} ARRIVED</div>
-                        <div class="text-slate-400 mb-6">区間運行完了</div>
+                    <div class="flex-grow flex flex-col items-center justify-center text-center overflow-y-auto">
+                        <div class="text-3xl font-bold text-yellow-400 mb-2">{{ current_station }} ARRIVED</div>
+                        <div class="text-slate-400 text-sm mb-6">区間運行完了</div>
                         
                         <!-- モード選択・乗り換えUI -->
-                        <div class="w-full max-w-sm">
+                        <div class="w-full max-w-xs space-y-3">
                             <form action="/depart" method="post" class="space-y-3">
                                 {% if is_nozomi_station %}
-                                    <div class="text-sm text-yellow-300 font-bold mb-2">乗り換え案内: 運行モードを選択できます</div>
-                                    <button name="mode" value="shinkansen" class="w-full bg-blue-600 hover:bg-blue-500 text-white font-bold py-3 px-6 rounded shadow flex justify-between items-center group">
-                                        <span class="pointer-events-none">各駅停車で次へ</span> <span class="text-xs opacity-75 pointer-events-none">7問/区間</span>
+                                    <div class="text-xs text-yellow-300 font-bold mb-1">乗り換え案内: 運行モードを選択できます</div>
+                                    <!-- ★ここを修正しました！のぞみボタンを上に移動 -->
+                                    <button name="mode" value="nozomi" class="w-full bg-yellow-500 hover:bg-yellow-400 text-slate-900 font-bold py-3 px-4 rounded shadow flex justify-between items-center group text-sm active:scale-95 transition">
+                                        <span class="pointer-events-none">超特急のぞみで次へ</span> <span class="text-[10px] opacity-75 pointer-events-none">28問/区間</span>
                                     </button>
-                                    <button name="mode" value="nozomi" class="w-full bg-yellow-500 hover:bg-yellow-400 text-slate-900 font-bold py-3 px-6 rounded shadow flex justify-between items-center group">
-                                        <span class="pointer-events-none">超特急のぞみで次へ</span> <span class="text-xs opacity-75 pointer-events-none">28問/区間</span>
+                                    <button name="mode" value="shinkansen" class="w-full bg-blue-600 hover:bg-blue-500 text-white font-bold py-3 px-4 rounded shadow flex justify-between items-center group text-sm active:scale-95 transition">
+                                        <span class="pointer-events-none">各駅停車で次へ</span> <span class="text-[10px] opacity-75 pointer-events-none">7問/区間</span>
                                     </button>
                                 {% else %}
-                                    <button name="mode" value="shinkansen" class="w-full bg-green-600 hover:bg-green-500 text-white font-bold py-4 px-8 rounded shadow-lg">
+                                    <button name="mode" value="shinkansen" class="w-full bg-green-600 hover:bg-green-500 text-white font-bold py-3 px-8 rounded shadow-lg active:scale-95 transition">
                                         次の駅へ出発
                                     </button>
                                 {% endif %}
                             </form>
                             
                             <!-- タイトルへ戻るボタン -->
-                            <a href="/" class="block mt-6 text-sm text-slate-500 hover:text-white underline">
+                            <a href="/" class="block mt-4 text-xs text-slate-500 hover:text-white underline">
                                 途中下車してタイトルへ戻る
                             </a>
                         </div>
                     </div>
                 {% elif state == 'goal' %}
-                     <div class="flex-grow flex flex-col items-center justify-center">
-                        <div class="text-5xl font-black text-yellow-400 mb-4">MISSION COMPLETE</div>
-                        <div class="text-xl text-white mb-2">全問走破＆新函館北斗駅 到着</div>
-                        <div class="text-lg text-slate-300 mb-8">最終スコア: {{ score }} / {{ total_answered }} 問正解</div>
-                        <a href="/" class="bg-slate-700 hover:bg-slate-600 text-white py-2 px-6 rounded">タイトルへ戻る</a>
+                     <div class="flex-grow flex flex-col items-center justify-center text-center">
+                        <div class="text-4xl font-black text-yellow-400 mb-4">MISSION COMPLETE</div>
+                        <div class="text-lg text-white mb-2">全問走破＆新函館北斗駅 到着</div>
+                        <div class="text-sm text-slate-300 mb-8">最終スコア: {{ score }} / {{ total_answered }} 問正解</div>
+                        <a href="/" class="bg-slate-700 hover:bg-slate-600 text-white py-2 px-6 rounded text-sm">タイトルへ戻る</a>
                      </div>
                 {% endif %}
             </div>
@@ -413,7 +427,6 @@ HTML_TEMPLATE = """
 @app.route('/')
 def index():
     # ★修正: タイトルに戻ったら、コレクション以外のゲーム進行データをきれいサッパリ忘れるようにします！
-    # これで「やり直し」がきかないトラブルを解決できます✨
     keys_to_remove = ['mode', 'current_station_idx', 'next_station_idx', 'score', 
                       'current_speed', 'question_deck', 'quiz_queue', 'current_quiz_idx', 
                       'question_start_time', 'total_answered_count']
