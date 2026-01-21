@@ -1,269 +1,341 @@
 import os
+import csv
 import random
-from flask import Flask, jsonify, request, session, render_template_string
+from flask import Flask, request, session, render_template_string, redirect, url_for
 
 app = Flask(__name__)
-app.secret_key = os.environ.get('SECRET_KEY', 'shinkansen_secret_key')
+app.secret_key = os.environ.get('SECRET_KEY', 'default_secret_key_for_shinkansen')
 
 # ---------------------------------------------------------
-# 1. マスターデータ定義 (全71駅・493問ロジック用)
+# 1. マスターデータ・設定
 # ---------------------------------------------------------
 
-# 駅データリスト (順序, 駅名, のぞみ停車フラグ)
+CSV_FILENAME = '67-76_hissu_004.csv'
+
+# 駅データ (ID, 駅名, のぞみ停車フラグ)
 STATION_DATA = [
-    (1, "鹿児島中央", False), (2, "川内", False), (3, "出水", False), (4, "新水俣", False), (5, "新八代", False),
-    (6, "熊本", True), (7, "新玉名", False), (8, "新大牟田", False), (9, "筑後船小屋", False), (10, "久留米", False),
-    (11, "新鳥栖", False), (12, "博多", True), (13, "小倉", True), (14, "新下関", False), (15, "厚狭", False),
-    (16, "新山口", False), (17, "徳山", False), (18, "新岩国", False), (19, "広島", True), (20, "東広島", False),
-    (21, "三原", False), (22, "新尾道", False), (23, "福山", False), (24, "新倉敷", False), (25, "岡山", True),
-    (26, "相生", False), (27, "姫路", False), (28, "西明石", False), (29, "新神戸", True), (30, "新大阪", True),
-    (31, "京都", True), (32, "米原", False), (33, "岐阜羽島", False), (34, "名古屋", True), (35, "三河安城", False),
-    (36, "豊橋", False), (37, "浜松", False), (38, "掛川", False), (39, "静岡", False), (40, "新富士", False),
-    (41, "三島", False), (42, "熱海", False), (43, "小田原", False), (44, "新横浜", True), (45, "品川", True),
-    (46, "東京", True), (47, "上野", False), (48, "大宮", True), (49, "小山", False), (50, "宇都宮", False),
-    (51, "那須塩原", False), (52, "新白河", False), (53, "郡山", False), (54, "福島", False), (55, "白石蔵王", False),
-    (56, "仙台", True), (57, "古川", False), (58, "くりこま高原", False), (59, "一ノ関", False), (60, "水沢江刺", False),
-    (61, "北上", False), (62, "新花巻", False), (63, "盛岡", True), (64, "いわて沼宮内", False), (65, "二戸", False),
-    (66, "八戸", False), (67, "七戸十和田", False), (68, "新青森", True), (69, "奥津軽いまべつ", False), (70, "木古内", False),
-    (71, "新函館北斗", True)
+    {"name": "鹿児島中央", "is_nozomi": False}, {"name": "川内", "is_nozomi": False},
+    {"name": "出水", "is_nozomi": False}, {"name": "新水俣", "is_nozomi": False},
+    {"name": "新八代", "is_nozomi": False}, {"name": "熊本", "is_nozomi": True},
+    {"name": "新玉名", "is_nozomi": False}, {"name": "新大牟田", "is_nozomi": False},
+    {"name": "筑後船小屋", "is_nozomi": False}, {"name": "久留米", "is_nozomi": False},
+    {"name": "新鳥栖", "is_nozomi": False}, {"name": "博多", "is_nozomi": True},
+    {"name": "小倉", "is_nozomi": True}, {"name": "新下関", "is_nozomi": False},
+    {"name": "厚狭", "is_nozomi": False}, {"name": "新山口", "is_nozomi": False},
+    {"name": "徳山", "is_nozomi": False}, {"name": "新岩国", "is_nozomi": False},
+    {"name": "広島", "is_nozomi": True}, {"name": "東広島", "is_nozomi": False},
+    {"name": "三原", "is_nozomi": False}, {"name": "新尾道", "is_nozomi": False},
+    {"name": "福山", "is_nozomi": False}, {"name": "新倉敷", "is_nozomi": False},
+    {"name": "岡山", "is_nozomi": True}, {"name": "相生", "is_nozomi": False},
+    {"name": "姫路", "is_nozomi": False}, {"name": "西明石", "is_nozomi": False},
+    {"name": "新神戸", "is_nozomi": True}, {"name": "新大阪", "is_nozomi": True},
+    {"name": "京都", "is_nozomi": True}, {"name": "米原", "is_nozomi": False},
+    {"name": "岐阜羽島", "is_nozomi": False}, {"name": "名古屋", "is_nozomi": True},
+    {"name": "三河安城", "is_nozomi": False}, {"name": "豊橋", "is_nozomi": False},
+    {"name": "浜松", "is_nozomi": False}, {"name": "掛川", "is_nozomi": False},
+    {"name": "静岡", "is_nozomi": False}, {"name": "新富士", "is_nozomi": False},
+    {"name": "三島", "is_nozomi": False}, {"name": "熱海", "is_nozomi": False},
+    {"name": "小田原", "is_nozomi": False}, {"name": "新横浜", "is_nozomi": True},
+    {"name": "品川", "is_nozomi": True}, {"name": "東京", "is_nozomi": True}
 ]
 
-# モード設定
-MODES = {
-    "shinkansen": {
-        "name": "新幹線モード（各駅停車）",
-        "questions_per_section": 7,
-        "final_questions": 3,
-        "target_stations": [s for s in STATION_DATA] # 全駅
-    },
-    "nozomi": {
-        "name": "のぞみモード（急行）",
-        "questions_normal": 28,
-        "questions_hub": 50, # 博多、東京
-        "final_questions": 1,
-        "hubs": ["博多", "東京"],
-        "target_stations": [s for s in STATION_DATA if s[2] or s[1] == "鹿児島中央"] # 停車駅のみ
-    }
-}
+# ---------------------------------------------------------
+# 2. データ読み込みロジック (修正版)
+# ---------------------------------------------------------
 
-TOTAL_QUESTIONS = 493
+def load_questions():
+    """CSVファイルから問題を読み込む"""
+    questions = []
+    
+    # 【修正1】絶対パスを取得して、確実にファイルを見つけられるようにする
+    base_dir = os.path.dirname(os.path.abspath(__file__))
+    csv_path = os.path.join(base_dir, CSV_FILENAME)
+    
+    try:
+        # 【修正2】先輩の情報に合わせて 'utf-8' に変更
+        # 'utf-8-sig' にしておくと、万が一BOM付き(Excel保存など)でも対応できるので最強です
+        with open(csv_path, mode='r', encoding='utf-8-sig') as f:
+            reader = csv.reader(f)
+            header = next(reader) # ヘッダーをスキップ
+            
+            for row in reader:
+                if len(row) < 11: continue # データ不足行はスキップ
+                
+                # CSVのカラム位置に合わせてデータを抽出
+                q_data = {
+                    "id": row[3],
+                    "question": row[4],
+                    "options": [row[5], row[6], row[7], row[8], row[9]],
+                    "answer_idx": int(row[10]) # 1~5の数値
+                }
+                questions.append(q_data)
+                
+    except Exception as e:
+        # 【デバッグ用】エラー内容を画面に出すように変更
+        # これで何が起きているか一目瞭然です！
+        error_msg = f"エラー発生: {str(e)} (Path: {csv_path})"
+        print(error_msg)
+        questions = [{
+            "id": "ERROR", 
+            "question": error_msg, 
+            "options": ["再読み込み", "設定確認", "パス確認", "コード確認", "ログ確認"], 
+            "answer_idx": 1
+        }]
+        
+    return questions
 
-# 簡易フロントエンド用テンプレート
+# アプリ起動時にデータをメモリにロード
+ALL_QUESTIONS = load_questions()
+
+# ---------------------------------------------------------
+# 3. HTMLテンプレート (Tailwind CSS使用)
+# ---------------------------------------------------------
 HTML_TEMPLATE = """
 <!DOCTYPE html>
 <html lang="ja">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>新幹線試験対策ドリル - Prototype</title>
-    <style>
-        body { font-family: 'Hiragino Kaku Gothic Pro', sans-serif; background: #222; color: #fff; text-align: center; }
-        .dashboard { max-width: 600px; margin: 0 auto; background: #333; padding: 20px; border-radius: 10px; border: 2px solid #555; }
-        .hud { background: rgba(0, 255, 255, 0.1); border: 1px solid #00ffff; padding: 15px; margin-bottom: 20px; color: #00ffff; }
-        .speedometer { font-size: 2em; font-weight: bold; color: #ffeb3b; margin: 10px 0; }
-        .btn { display: block; width: 100%; padding: 15px; margin: 5px 0; background: #444; border: 1px solid #777; color: #fff; cursor: pointer; border-radius: 5px; font-size: 16px; }
-        .btn:hover { background: #555; border-color: #aaa; }
-        .status { margin-top: 20px; font-size: 0.9em; color: #aaa; }
-        .bar-container { width: 100%; background-color: #111; border-radius: 5px; margin: 10px 0; }
-        .bar { height: 10px; background-color: #4caf50; border-radius: 5px; transition: width 0.3s; }
-    </style>
+    <title>新幹線でGO! 日本縦断ドリル</title>
+    <script src="https://cdn.tailwindcss.com"></script>
 </head>
-<body>
-    <div class="dashboard">
-        <h1>🚄 {{ game_state.mode_name }}</h1>
+<body class="bg-slate-100 text-slate-800 font-sans min-h-screen">
+
+    <div class="max-w-md mx-auto bg-white min-h-screen shadow-2xl relative">
         
-        <div class="hud">
-            <div>NEXT STATION: {{ game_state.next_station }}</div>
-            <div>区間残り: {{ game_state.section_remaining }} 問</div>
-            <div style="font-size: 0.8em;">(トータル消化: {{ game_state.total_solved }} / 493)</div>
+        <!-- ヘッダー -->
+        {% if state != 'menu' %}
+        <div class="bg-blue-600 text-white p-4 sticky top-0 z-10 shadow-md">
+            <div class="flex justify-between items-center">
+                <div class="text-sm font-bold flex items-center gap-2">
+                    <span class="bg-yellow-400 text-blue-900 px-2 py-0.5 rounded text-xs">{{ mode_label }}</span>
+                    {{ current_station }} → {{ next_station }}
+                </div>
+                <div class="text-sm">正解: {{ score }}問</div>
+            </div>
+            <div class="w-full bg-blue-800 h-1 mt-2 rounded-full">
+                <div class="bg-yellow-400 h-1 rounded-full" style="width: {{ progress }}%"></div>
+            </div>
         </div>
+        {% endif %}
 
-        <div class="speedometer">
-            {{ game_state.current_speed }} km/h
-        </div>
+        <main class="p-4">
+            
+            <!-- 1. メニュー画面 -->
+            {% if state == 'menu' %}
+            <div class="text-center py-10">
+                <div class="flex justify-center mb-6 text-blue-600">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="16" height="16" x="4" y="4" rx="2"/><path d="M4 11h16"/><path d="M12 4v16"/><path d="m8 8 2 2-2 2"/><path d="m16 8-2 2 2 2"/></svg>
+                </div>
+                <h1 class="text-2xl font-bold mb-2 text-blue-900">新幹線でGO!<br>日本縦断ドリル</h1>
+                <p class="text-slate-500 mb-8 text-sm">全493問の旅へ出発進行！</p>
+                
+                <form action="/start" method="post" class="space-y-4">
+                    <button name="mode" value="shinkansen" class="w-full bg-blue-500 hover:bg-blue-600 text-white font-bold py-4 px-6 rounded-xl shadow-lg transition text-left group">
+                        <div class="flex justify-between items-center">
+                            <div>
+                                <div class="text-lg">各駅停車モード</div>
+                                <div class="text-xs opacity-80">じっくり学習 (1区間 3問)</div>
+                            </div>
+                            <span>▶</span>
+                        </div>
+                    </button>
+                    <button name="mode" value="nozomi" class="w-full bg-yellow-500 hover:bg-yellow-600 text-white font-bold py-4 px-6 rounded-xl shadow-lg transition text-left group">
+                        <div class="flex justify-between items-center">
+                            <div>
+                                <div class="text-lg">のぞみ急行モード</div>
+                                <div class="text-xs opacity-80">一気に北上 (1区間 5問)</div>
+                            </div>
+                            <span>▶</span>
+                        </div>
+                    </button>
+                </form>
+            </div>
+            {% endif %}
 
-        {% if game_state.is_finished %}
-            <h2 style="color: #4caf50;">🎉 全線走破！業務完了！ 🎉</h2>
-            <p>最終スコア: {{ game_state.score }}</p>
-            <a href="/" class="btn" style="background:#2196f3;">トップへ戻る</a>
-        {% else %}
-            <div id="question-area">
-                <p>Q. {{ current_question.text }} (ダミー問題)</p>
-                <form action="/answer" method="post">
-                    {% for option in current_question.options %}
-                        <button type="submit" name="answer" value="{{ option }}" class="btn">{{ option }}</button>
+            <!-- 2. クイズ画面 -->
+            {% if state == 'quiz' %}
+            <div class="mb-4">
+                <!-- エラー時は赤く表示 -->
+                <div class="{{ 'bg-red-50 border-red-200' if question.id == 'ERROR' else 'bg-blue-50 border-blue-100' }} border p-4 rounded-xl mb-6">
+                    <div class="text-xs font-bold mb-2 {{ 'text-red-500' if question.id == 'ERROR' else 'text-blue-500' }}">ID: {{ question.id }}</div>
+                    <h2 class="text-lg font-bold leading-relaxed">{{ question.question }}</h2>
+                </div>
+
+                <form action="/answer" method="post" class="space-y-3">
+                    {% for opt in question.options %}
+                    <button name="choice" value="{{ loop.index }}" class="w-full bg-white border-2 border-slate-200 hover:border-blue-500 hover:bg-blue-50 text-slate-700 font-bold py-4 px-4 rounded-xl text-left transition shadow-sm">
+                        {{ opt }}
+                    </button>
                     {% endfor %}
                 </form>
             </div>
-        {% endif %}
+            {% endif %}
 
-        <div class="status">
-            現在地: {{ game_state.current_station }} ➡ {{ game_state.next_station }}<br>
-            定時運行状況: {{ "🟢 順調" if game_state.is_on_time else "🔴 遅延" }}
-        </div>
-        
-        <div class="bar-container">
-            <div class="bar" style="width: {{ (game_state.total_solved / 493) * 100 }}%;"></div>
-        </div>
+            <!-- 3. 正解/不正解 結果画面 -->
+            {% if state == 'judgement' %}
+            <div class="text-center py-10">
+                {% if is_correct %}
+                    <div class="text-green-500 text-6xl mb-4 font-black">◎ 正解</div>
+                    <p class="text-slate-600 mb-8">ナイス回答です！</p>
+                {% else %}
+                    <div class="text-red-500 text-6xl mb-4 font-black">✕ 不正解</div>
+                    <p class="text-slate-600 mb-2">正解は...</p>
+                    <p class="text-lg font-bold mb-8">{{ correct_answer_text }}</p>
+                {% endif %}
+
+                <form action="/next" method="post">
+                    <button class="bg-blue-600 text-white font-bold py-3 px-10 rounded-full shadow-lg hover:bg-blue-700 transition">
+                        次へ進む
+                    </button>
+                </form>
+            </div>
+            {% endif %}
+
+            <!-- 4. 駅到着 -->
+            {% if state == 'station_arrival' %}
+            <div class="text-center py-10">
+                <div class="text-blue-600 mb-4 flex justify-center">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg>
+                </div>
+                <h2 class="text-3xl font-bold text-slate-800 mb-2">{{ current_station }} に到着！</h2>
+                <p class="text-slate-500 mb-8">お疲れ様でした！</p>
+                
+                <div class="bg-slate-100 p-6 rounded-xl mb-8">
+                    <p class="text-sm text-slate-500">現在の累計スコア</p>
+                    <p class="text-4xl font-black text-blue-600">{{ score }}問正解</p>
+                </div>
+
+                <form action="/depart" method="post">
+                    <button class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-4 px-8 rounded-xl shadow-lg transition">
+                        次の駅へ出発
+                    </button>
+                </form>
+            </div>
+            {% endif %}
+
+             <!-- 5. ゴール -->
+             {% if state == 'goal' %}
+             <div class="text-center py-10">
+                 <h2 class="text-4xl font-black text-yellow-500 mb-4">日本縦断達成！</h2>
+                 <p class="mb-6 font-bold text-slate-700">東京駅に到着しました！</p>
+                 <div class="bg-yellow-50 p-6 rounded-xl mb-8 border-2 border-yellow-200">
+                     <p class="text-sm text-slate-500">最終スコア</p>
+                     <p class="text-5xl font-black text-slate-800">{{ score }}問</p>
+                 </div>
+                 <a href="/" class="block w-full bg-slate-800 text-white font-bold py-3 px-6 rounded-xl hover:bg-slate-700">
+                     最初から挑戦する
+                 </a>
+             </div>
+             {% endif %}
+
+        </main>
     </div>
 </body>
 </html>
 """
 
 # ---------------------------------------------------------
-# 2. ゲームロジック
-# ---------------------------------------------------------
-
-class GameEngine:
-    def __init__(self):
-        self.reset()
-
-    def reset(self, mode="shinkansen"):
-        self.mode = mode
-        self.current_station_index = 0
-        self.total_solved = 0
-        self.section_solved = 0
-        self.score = 0
-        self.speed = 0
-        self.is_on_time = True
-        
-        # モードごとの駅リスト構築
-        self.stations = MODES[mode]["target_stations"]
-        # 次の駅までの必要問題数計算
-        self.update_section_target()
-
-    def update_section_target(self):
-        # ゴール判定
-        if self.current_station_index >= len(self.stations) - 1:
-            self.section_target = 0
-            return
-
-        next_st_name = self.stations[self.current_station_index + 1][1]
-        
-        if self.mode == "shinkansen":
-            # 最後の区間（木古内→新函館北斗）の後の「最終試験」判定
-            if next_st_name == "新函館北斗":
-                # 木古内→新函館北斗の移動中(7問) + 到着後の試験(3問)
-                # ここでは簡易的に到着前の区間として処理し、到着ロジックで分岐させる
-                self.section_target = 7 
-            else:
-                self.section_target = 7
-        
-        elif self.mode == "nozomi":
-            if next_st_name == "新函館北斗":
-                self.section_target = 28 # 新青森→新函館北斗区間
-            elif next_st_name in MODES["nozomi"]["hubs"]:
-                self.section_target = 50 # 乗換駅（博多・東京）へ向かう区間
-            else:
-                self.section_target = 28 # 通常
-
-    def get_state(self):
-        is_finished = self.total_solved >= TOTAL_QUESTIONS
-        
-        # 次の駅名
-        if self.current_station_index < len(self.stations) - 1:
-            next_station = self.stations[self.current_station_index + 1][1]
-        else:
-            next_station = "FINISH"
-
-        # 最終問題（新函館北斗到着後）の処理
-        # ロジック: 駅間クイズが終わったら「到着」。到着後に「残り」を出題。
-        # このプロトタイプでは簡易化のため、残数が少なくなったら「最終試験中」と表示
-        remaining_in_section = self.section_target - self.section_solved
-        
-        # 特殊処理：ゴール手前の残数調整
-        final_questions = MODES[self.mode]["final_questions"]
-        if next_station == "新函館北斗" and remaining_in_section <= 0:
-            # 区間完走したが、まだ最終試験が残っている場合
-            if self.total_solved < TOTAL_QUESTIONS:
-                next_station = "新函館北斗（最終試験）"
-                remaining_in_section = TOTAL_QUESTIONS - self.total_solved
-
-        return {
-            "mode_name": MODES[self.mode]["name"],
-            "current_station": self.stations[self.current_station_index][1],
-            "next_station": next_station,
-            "total_solved": self.total_solved,
-            "section_remaining": max(0, remaining_in_section),
-            "current_speed": self.speed,
-            "is_on_time": self.is_on_time,
-            "is_finished": is_finished,
-            "score": self.score
-        }
-
-    def answer_question(self, is_correct):
-        if is_correct:
-            self.total_solved += 1
-            self.section_solved += 1
-            self.score += 100
-            self.speed = min(320, self.speed + 30) # 加速
-            self.is_on_time = True
-        else:
-            self.speed = max(0, self.speed - 50) # 減速
-            self.is_on_time = False # 遅延扱い
-
-        # 区間クリア判定
-        if self.section_solved >= self.section_target:
-            # 最終問題でなければ駅を進める
-            if self.total_solved < TOTAL_QUESTIONS - MODES[self.mode]["final_questions"]:
-                self.current_station_index += 1
-                self.section_solved = 0
-                self.update_section_target()
-                self.speed = 0 # 停車
-            elif self.total_solved >= TOTAL_QUESTIONS:
-                # 完全クリア
-                pass
-
-# インスタンス化 (簡易的にグローバル変数)
-game = GameEngine()
-
-# ---------------------------------------------------------
-# 3. Webアプリルート
+# 4. ルーティング & ゲームロジック
 # ---------------------------------------------------------
 
 @app.route('/')
 def index():
-    # トップページ兼リセット
-    game.reset("shinkansen") # デフォルト
-    return render_template_string(HTML_TEMPLATE, 
-                                  game_state=game.get_state(),
-                                  current_question={"text": "スタートしますか？", "options": ["出発進行！"]})
+    session.clear()
+    return render_template_string(HTML_TEMPLATE, state='menu')
 
-@app.route('/mode/<mode_name>')
-def switch_mode(mode_name):
-    game.reset(mode_name)
-    return render_template_string(HTML_TEMPLATE, 
-                                  game_state=game.get_state(),
-                                  current_question={"text": f"{mode_name}で出発！", "options": ["出発進行！"]})
+@app.route('/start', methods=['POST'])
+def start_game():
+    mode = request.form.get('mode')
+    session['mode'] = mode
+    session['current_station_idx'] = 0
+    session['score'] = 0
+    set_next_destination(0, mode)
+    
+    # 問題セットを準備
+    questions_per_leg = 3 if mode == 'shinkansen' else 5
+    
+    # エラー時は1問だけにする（無限ループ防止）
+    if len(ALL_QUESTIONS) == 1 and ALL_QUESTIONS[0]['id'] == 'ERROR':
+        selected_questions = ALL_QUESTIONS
+    else:
+        selected_questions = random.sample(ALL_QUESTIONS, min(len(ALL_QUESTIONS), questions_per_leg))
+    
+    session['quiz_queue'] = selected_questions
+    session['current_quiz_idx'] = 0
+    return redirect(url_for('play'))
+
+def set_next_destination(current_idx, mode):
+    next_idx = current_idx + 1
+    if mode == 'nozomi':
+        for i in range(current_idx + 1, len(STATION_DATA)):
+            if STATION_DATA[i]['is_nozomi']:
+                next_idx = i
+                break
+            next_idx = len(STATION_DATA) - 1
+    session['next_station_idx'] = next_idx
+
+@app.route('/play')
+def play():
+    if 'quiz_queue' not in session: return redirect(url_for('index'))
+    queue = session['quiz_queue']
+    idx = session['current_quiz_idx']
+    
+    if idx >= len(queue):
+        return render_template_string(HTML_TEMPLATE, 
+            state='station_arrival',
+            current_station=STATION_DATA[session['next_station_idx']]['name'],
+            score=session['score']
+        )
+        
+    return render_template_string(HTML_TEMPLATE,
+        state='quiz',
+        question=queue[idx],
+        mode_label="各駅" if session['mode'] == 'shinkansen' else "のぞみ",
+        current_station=STATION_DATA[session['current_station_idx']]['name'],
+        next_station=STATION_DATA[session['next_station_idx']]['name'],
+        score=session['score'],
+        progress=(idx / len(queue)) * 100
+    )
 
 @app.route('/answer', methods=['POST'])
 def answer():
-    # ダミー回答処理（常に正解扱い、またはランダムにする）
-    # プロトタイプなので「正解」ボタンと「不正解」ボタンをシミュレート
-    user_input = request.form.get('answer')
+    choice = int(request.form.get('choice'))
+    queue = session['quiz_queue']
+    idx = session['current_quiz_idx']
+    current_q = queue[idx]
+    is_correct = (choice == current_q['answer_idx'])
     
-    is_correct = True
-    if user_input == "不正解シミュレート":
-        is_correct = False
+    if is_correct: session['score'] += 1
+    return render_template_string(HTML_TEMPLATE,
+        state='judgement',
+        is_correct=is_correct,
+        correct_answer_text=current_q['options'][current_q['answer_idx']-1]
+    )
+
+@app.route('/next', methods=['POST'])
+def next_question():
+    session['current_quiz_idx'] += 1
+    return redirect(url_for('play'))
+
+@app.route('/depart', methods=['POST'])
+def depart():
+    current_idx = session['next_station_idx']
+    session['current_station_idx'] = current_idx
+    if current_idx >= len(STATION_DATA) - 1:
+        return render_template_string(HTML_TEMPLATE, state='goal', score=session['score'])
     
-    # スタートボタン等の処理
-    if user_input == "出発進行！":
-        pass
+    set_next_destination(current_idx, session['mode'])
+    questions_per_leg = 3 if session['mode'] == 'shinkansen' else 5
+    
+    if len(ALL_QUESTIONS) == 1 and ALL_QUESTIONS[0]['id'] == 'ERROR':
+        selected_questions = ALL_QUESTIONS
     else:
-        game.answer_question(is_correct)
-
-    # 次の問題生成（ダミー）
-    question = {
-        "text": f"第{game.total_solved + 1}問: 過去問データベースからの出題です。",
-        "options": ["正解の選択肢", "不正解シミュレート", "選択肢C", "選択肢D", "選択肢E"]
-    }
-    
-    if game.mode == "nozomi":
-        question["options"] = ["正解の選択肢", "不正解シミュレート"]
-
-    return render_template_string(HTML_TEMPLATE, 
-                                  game_state=game.get_state(),
-                                  current_question=question)
+        selected_questions = random.sample(ALL_QUESTIONS, min(len(ALL_QUESTIONS), questions_per_leg))
+        
+    session['quiz_queue'] = selected_questions
+    session['current_quiz_idx'] = 0
+    return redirect(url_for('play'))
 
 if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=5000)
+    app.run(debug=True)
