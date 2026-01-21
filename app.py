@@ -15,14 +15,14 @@ CSV_FILENAME = '67-76_hissu_004.csv'
 
 # 駅データ (九州〜北海道まで完全収録！)
 STATION_DATA = [
-    # --- 九州新幹線 ---
+    # --- 九州新幹線 (0-11) ---
     {"name": "鹿児島中央", "is_nozomi": False}, {"name": "川内", "is_nozomi": False},
     {"name": "出水", "is_nozomi": False}, {"name": "新水俣", "is_nozomi": False},
     {"name": "新八代", "is_nozomi": False}, {"name": "熊本", "is_nozomi": True},
     {"name": "新玉名", "is_nozomi": False}, {"name": "新大牟田", "is_nozomi": False},
     {"name": "筑後船小屋", "is_nozomi": False}, {"name": "久留米", "is_nozomi": False},
     {"name": "新鳥栖", "is_nozomi": False}, {"name": "博多", "is_nozomi": True},
-    # --- 山陽・東海道新幹線 ---
+    # --- 山陽・東海道新幹線 (12-45) ---
     {"name": "小倉", "is_nozomi": True}, {"name": "新下関", "is_nozomi": False},
     {"name": "厚狭", "is_nozomi": False}, {"name": "新山口", "is_nozomi": False},
     {"name": "徳山", "is_nozomi": False}, {"name": "新岩国", "is_nozomi": False},
@@ -40,7 +40,7 @@ STATION_DATA = [
     {"name": "三島", "is_nozomi": False}, {"name": "熱海", "is_nozomi": False},
     {"name": "小田原", "is_nozomi": False}, {"name": "新横浜", "is_nozomi": True},
     {"name": "品川", "is_nozomi": True}, {"name": "東京", "is_nozomi": True},
-    # --- 東北・北海道新幹線 ---
+    # --- 東北・北海道新幹線 (46-) ---
     {"name": "上野", "is_nozomi": False}, {"name": "大宮", "is_nozomi": True},
     {"name": "宇都宮", "is_nozomi": False}, {"name": "那須塩原", "is_nozomi": False},
     {"name": "新白河", "is_nozomi": False}, {"name": "郡山", "is_nozomi": False},
@@ -96,6 +96,18 @@ def load_questions():
     return questions
 
 ALL_QUESTIONS = load_questions()
+
+# ★ ヘルパー関数: 現在地に応じた超特急の名称を取得
+def get_express_name(station_idx):
+    # 博多(11)より前は九州新幹線
+    if station_idx < 11:
+        return "みずほ"
+    # 東京(45)より前は山陽・東海道新幹線
+    elif station_idx < 45:
+        return "のぞみ"
+    # それ以降は東北・北海道新幹線
+    else:
+        return "はやぶさ"
 
 # ---------------------------------------------------------
 # 3. HTMLテンプレート
@@ -208,7 +220,7 @@ HTML_TEMPLATE = """
                         <div class="text-xs opacity-75 font-normal pointer-events-none">じっくり確実に進むならこちら</div>
                     </button>
                     <button name="mode" value="nozomi" class="w-full bg-yellow-500 hover:bg-yellow-400 text-slate-900 font-bold py-3 px-4 rounded shadow-lg transform transition active:scale-95">
-                        <div class="pointer-events-none">超特急のぞみモード (28問/区間)</div>
+                        <div class="pointer-events-none">超特急{{ express_name }}モード (28問/区間)</div>
                         <div class="text-xs opacity-75 font-normal pointer-events-none">大量の問題を高速処理！</div>
                     </button>
                 </form>
@@ -344,7 +356,7 @@ HTML_TEMPLATE = """
                                     <div class="text-xs text-yellow-300 font-bold mb-1">乗り換え案内: 運行モードを選択できます</div>
                                     <!-- ★ここを修正しました！のぞみボタンを上に移動 -->
                                     <button name="mode" value="nozomi" class="w-full bg-yellow-500 hover:bg-yellow-400 text-slate-900 font-bold py-3 px-4 rounded shadow flex justify-between items-center group text-sm active:scale-95 transition">
-                                        <span class="pointer-events-none">超特急のぞみで次へ</span> <span class="text-[10px] opacity-75 pointer-events-none">28問/区間</span>
+                                        <span class="pointer-events-none">超特急{{ express_name }}で次へ</span> <span class="text-[10px] opacity-75 pointer-events-none">28問/区間</span>
                                     </button>
                                     <button name="mode" value="shinkansen" class="w-full bg-blue-600 hover:bg-blue-500 text-white font-bold py-3 px-4 rounded shadow flex justify-between items-center group text-sm active:scale-95 transition">
                                         <span class="pointer-events-none">各駅停車で次へ</span> <span class="text-[10px] opacity-75 pointer-events-none">7問/区間</span>
@@ -475,7 +487,8 @@ def index():
         session.pop(key, None)
 
     collected = session.get('collected_landmarks', [])
-    return render_template_string(HTML_TEMPLATE, state='menu', current_speed=0, all_landmarks=LANDMARK_DATA, collected=collected, total_questions=len(ALL_QUESTIONS))
+    # ★ 初期値は「みずほ」(0)
+    return render_template_string(HTML_TEMPLATE, state='menu', current_speed=0, all_landmarks=LANDMARK_DATA, collected=collected, total_questions=len(ALL_QUESTIONS), express_name=get_express_name(0))
 
 @app.route('/start', methods=['POST'])
 def start_game():
@@ -563,12 +576,16 @@ def play():
         # 現在の駅が「のぞみ停車駅」かどうかを判定してテンプレートへ渡す
         current_station_data = STATION_DATA[session['next_station_idx']]
         is_nozomi_station = current_station_data['is_nozomi']
+        
+        # ★ 次の区間の列車名を取得（到着した駅＝次の出発駅）
+        express_name = get_express_name(session['next_station_idx'])
 
         return render_template_string(HTML_TEMPLATE, 
             state='station_arrival',
             current_station=current_station_data['name'],
             score=session['score'], current_speed=0, total_questions=len(ALL_QUESTIONS), total_answered=session['total_answered_count'],
-            is_nozomi_station=is_nozomi_station
+            is_nozomi_station=is_nozomi_station,
+            express_name=express_name # ★追加
         )
     
     current_st_idx = session['current_station_idx']
@@ -588,11 +605,15 @@ def play():
         others = [i for i in range(5) if i != correct_idx_zero]
         # その中からランダムに3つ選ぶ
         disabled_indices = random.sample(others, 3)
+    
+    # ★ モードラベルの動的生成
+    express_name = get_express_name(current_st_idx)
+    mode_label = "各駅停車" if session['mode'] == 'shinkansen' else f"超特急{express_name}"
 
     return render_template_string(HTML_TEMPLATE,
         state='quiz',
         question=current_question,
-        mode_label="各駅停車" if session['mode'] == 'shinkansen' else "超特急のぞみ",
+        mode_label=mode_label, # ★修正
         current_station=STATION_DATA[current_st_idx]['name'],
         next_station=STATION_DATA[session['next_station_idx']]['name'],
         score=session['score'],
