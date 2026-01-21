@@ -163,6 +163,10 @@ HTML_TEMPLATE = """
             box-shadow: 0 0 15px rgba(66, 153, 225, 0.1);
             backdrop-filter: blur(2px);
         }
+        /* スクロールバー装飾 */
+        .custom-scrollbar::-webkit-scrollbar { width: 6px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: rgba(0,0,0,0.3); }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: rgba(66, 153, 225, 0.5); border-radius: 3px; }
     </style>
 </head>
 <body class="text-white h-screen flex flex-col">
@@ -251,15 +255,26 @@ HTML_TEMPLATE = """
             <!-- 右パネル -->
             <div class="w-2/3 glass-panel rounded-lg p-4 flex flex-col relative monitor-scanline">
                 {% if state == 'quiz' %}
-                    <div class="flex-grow flex flex-col justify-center">
+                    <div class="flex-grow flex flex-col justify-center h-full">
                         <div class="text-blue-300 text-xs mb-2 font-mono">ID: {{ question.id }}</div>
-                        <h2 class="text-lg md:text-xl font-bold leading-relaxed text-white mb-6 drop-shadow-md">{{ question.question }}</h2>
-                        <form action="/answer" method="post" class="grid grid-cols-1 gap-2 overflow-y-auto max-h-[200px] pr-2 custom-scrollbar">
+                        <h2 class="text-lg md:text-xl font-bold leading-relaxed text-white mb-4 drop-shadow-md">{{ question.question }}</h2>
+                        <!-- ★修正: max-h制限を撤廃し、flex-growで高さいっぱい使うように変更 -->
+                        <form action="/answer" method="post" class="flex flex-col gap-2 overflow-y-auto flex-grow pr-1 custom-scrollbar">
                             <input type="hidden" name="client_speed" id="clientSpeedInput" value="0">
                             <input type="hidden" name="got_landmark" id="gotLandmarkInput" value="0">
                             {% for opt in question.options %}
-                            <button name="choice" value="{{ loop.index }}" onclick="submitAnswer(this)" class="w-full bg-slate-800/80 hover:bg-blue-600/50 border border-slate-600 hover:border-blue-400 text-left px-4 py-3 rounded text-sm transition-all duration-200 group">
-                                <span class="text-blue-400 mr-2 group-hover:text-white pointer-events-none">[{{ loop.index }}]</span><span class="pointer-events-none">{{ opt }}</span>
+                            {% set is_disabled = (loop.index0 in disabled_indices) %}
+                            <!-- ★修正: パディングを py-3 から py-2 に減らし、全体をコンパクトに -->
+                            <button name="choice" value="{{ loop.index }}" onclick="submitAnswer(this)"
+                                {% if is_disabled %}disabled{% endif %}
+                                class="w-full text-left px-4 py-2 rounded text-sm transition-all duration-200 group border
+                                {% if is_disabled %}
+                                    bg-slate-900/50 border-slate-800 text-slate-700 cursor-not-allowed
+                                {% else %}
+                                    bg-slate-800/80 hover:bg-blue-600/50 border-slate-600 hover:border-blue-400 text-white
+                                {% endif %}">
+                                <span class="mr-2 pointer-events-none {% if is_disabled %}invisible{% else %}text-blue-400 group-hover:text-white{% endif %}">[{{ loop.index }}]</span>
+                                <span class="pointer-events-none {% if is_disabled %}line-through opacity-30{% endif %}">{{ opt }}</span>
                             </button>
                             {% endfor %}
                         </form>
@@ -510,6 +525,16 @@ def play():
     q_index = queue[idx]
     current_question = ALL_QUESTIONS[q_index]
 
+    # ★ 追加: 超特急のぞみモードなら、選択肢を2択にする（3つ消す）
+    disabled_indices = []
+    if session.get('mode') == 'nozomi':
+        # 正解のインデックス(0始まり)を取得
+        correct_idx_zero = current_question['answer_idx'] - 1
+        # 正解以外のインデックス(0-4)のリストを作成
+        others = [i for i in range(5) if i != correct_idx_zero]
+        # その中からランダムに3つ選ぶ
+        disabled_indices = random.sample(others, 3)
+
     return render_template_string(HTML_TEMPLATE,
         state='quiz',
         question=current_question,
@@ -521,7 +546,8 @@ def play():
         current_speed=session.get('current_speed', 100),
         landmark=landmark,
         total_questions=len(ALL_QUESTIONS),
-        total_answered=session['total_answered_count'] + 1
+        total_answered=session['total_answered_count'] + 1,
+        disabled_indices=disabled_indices
     )
 
 @app.route('/answer', methods=['POST'])
