@@ -55,49 +55,16 @@ STATION_DATA = [
     {"name": "木古内", "is_nozomi": False}, {"name": "新函館北斗", "is_nozomi": True}
 ]
 
-# 名所データ (出現する区間の「開始駅インデックス」をキーにする)
+# 名所データ
 LANDMARK_DATA = {
-    0: { # 鹿児島中央 -> 川内
-        "name": "桜島",
-        "svg": '<path fill="#FF8C00" d="M100,200 Q200,50 300,200 L400,250 L0,250 Z" opacity="0.8"/><circle cx="200" cy="50" r="10" fill="#FFF" opacity="0.5"><animate attributeName="cy" from="50" to="20" dur="2s" repeatCount="indefinite"/><animate attributeName="opacity" values="0.5;0;0.5" dur="2s" repeatCount="indefinite"/></circle>',
-        "desc": "雄大な桜島の噴煙"
-    },
-    25: { # 相生 -> 姫路 (姫路の手前)
-        "name": "姫路城",
-        "svg": '<path fill="#EEE" d="M150,200 L150,150 L250,150 L250,200 Z M120,150 L280,150 L200,80 Z M190,80 L210,80 L200,60 Z" stroke="#333" stroke-width="2"/>',
-        "desc": "白鷺城の美しさ"
-    },
-    30: { # 京都 -> 米原 (京都出発直後)
-        "name": "五重塔",
-        "svg": '<g fill="#8B4513"><rect x="180" y="50" width="40" height="150"/><path d="M150,90 L250,90 L200,60 Z"/><path d="M140,120 L260,120 L200,90 Z"/><path d="M130,150 L270,150 L200,120 Z"/><path d="M120,180 L280,180 L200,150 Z"/><path d="M110,210 L290,210 L200,180 Z"/></g>',
-        "desc": "古都のシンボル"
-    },
-    38: { # 静岡 -> 新富士
-        "name": "富士山",
-        "svg": '<path fill="#FFF" d="M150,100 L250,100 L200,60 Z"/><path fill="#4682B4" d="M50,250 L200,60 L350,250 Z" stroke="none"/><path fill="#FFF" d="M165,105 L200,60 L235,105 Q200,120 165,105 Z"/>',
-        "desc": "日本一の霊峰"
-    },
-    44: { # 品川 -> 東京
-        "name": "東京タワー",
-        "svg": '<path fill="#FF4500" d="M180,250 L220,250 L200,50 Z"/><rect x="190" y="100" width="20" height="10" fill="#FFF"/><rect x="185" y="180" width="30" height="10" fill="#FFF"/>',
-        "desc": "首都のランドマーク"
-    },
-    53: { # 白石蔵王 -> 仙台 (松島付近)
-        "name": "松島",
-        "svg": '<rect x="0" y="200" width="400" height="50" fill="#4682B4"/><path fill="#228B22" d="M50,210 Q70,180 90,210 Z M150,220 Q180,170 210,220 Z M300,210 Q320,190 340,210 Z"/>',
-        "desc": "日本三景の島々"
-    },
-    66: { # 奥津軽いまべつ -> 木古内 (青函トンネル)
-        "name": "青函トンネル",
-        "svg": '<rect x="0" y="0" width="1000" height="1000" fill="#111"/><circle cx="200" cy="150" r="10" fill="#FFFF00" opacity="0.5"><animate attributeName="opacity" values="0.5;1;0.5" dur="0.5s" repeatCount="indefinite"/></circle>',
-        "desc": "海底の大動脈",
-        "is_tunnel": True
-    },
-    67: { # 木古内 -> 新函館北斗 (函館山)
-        "name": "函館山",
-        "svg": '<path fill="#000" d="M50,250 Q200,100 350,250 Z" opacity="0.8"/><circle cx="100" cy="50" r="2" fill="white" /><circle cx="200" cy="80" r="2" fill="white" /><circle cx="300" cy="40" r="2" fill="white" />',
-        "desc": "100万ドルの夜景"
-    }
+    0: { "name": "桜島", "svg": '<path fill="#FF8C00" d="M100,200 Q200,50 300,200 L400,250 L0,250 Z" opacity="0.8"/><circle cx="200" cy="50" r="10" fill="#FFF" opacity="0.5"><animate attributeName="cy" from="50" to="20" dur="2s" repeatCount="indefinite"/><animate attributeName="opacity" values="0.5;0;0.5" dur="2s" repeatCount="indefinite"/></circle>', "desc": "雄大な桜島の噴煙" },
+    25: { "name": "姫路城", "svg": '<path fill="#EEE" d="M150,200 L150,150 L250,150 L250,200 Z M120,150 L280,150 L200,80 Z M190,80 L210,80 L200,60 Z" stroke="#333" stroke-width="2"/>', "desc": "白鷺城の美しさ" },
+    30: { "name": "五重塔", "svg": '<g fill="#8B4513"><rect x="180" y="50" width="40" height="150"/><path d="M150,90 L250,90 L200,60 Z"/><path d="M140,120 L260,120 L200,90 Z"/><path d="M130,150 L270,150 L200,120 Z"/><path d="M120,180 L280,180 L200,150 Z"/><path d="M110,210 L290,210 L200,180 Z"/></g>', "desc": "古都のシンボル" },
+    38: { "name": "富士山", "svg": '<path fill="#FFF" d="M150,100 L250,100 L200,60 Z"/><path fill="#4682B4" d="M50,250 L200,60 L350,250 Z" stroke="none"/><path fill="#FFF" d="M165,105 L200,60 L235,105 Q200,120 165,105 Z"/>', "desc": "日本一の霊峰" },
+    44: { "name": "東京タワー", "svg": '<path fill="#FF4500" d="M180,250 L220,250 L200,50 Z"/><rect x="190" y="100" width="20" height="10" fill="#FFF"/><rect x="185" y="180" width="30" height="10" fill="#FFF"/>', "desc": "首都のランドマーク" },
+    53: { "name": "松島", "svg": '<rect x="0" y="200" width="400" height="50" fill="#4682B4"/><path fill="#228B22" d="M50,210 Q70,180 90,210 Z M150,220 Q180,170 210,220 Z M300,210 Q320,190 340,210 Z"/>', "desc": "日本三景の島々" },
+    66: { "name": "青函トンネル", "svg": '<rect x="0" y="0" width="1000" height="1000" fill="#111"/><circle cx="200" cy="150" r="10" fill="#FFFF00" opacity="0.5"><animate attributeName="opacity" values="0.5;1;0.5" dur="0.5s" repeatCount="indefinite"/></circle>', "desc": "海底の大動脈", "is_tunnel": True },
+    67: { "name": "函館山", "svg": '<path fill="#000" d="M50,250 Q200,100 350,250 Z" opacity="0.8"/><circle cx="100" cy="50" r="2" fill="white" /><circle cx="200" cy="80" r="2" fill="white" /><circle cx="300" cy="40" r="2" fill="white" />', "desc": "100万ドルの夜景" }
 }
 
 # ---------------------------------------------------------
@@ -250,4 +217,389 @@ HTML_TEMPLATE = """
     </div>
 
     <!-- 2. コックピット -->
-    <div class="cockpit-frame h-1/2 min-h-[400px] flex flex-col p-2 relative z-
+    <div class="cockpit-frame h-1/2 min-h-[400px] flex flex-col p-2 relative z-10">
+        <div class="flex justify-between items-center px-4 py-2 bg-black/40 rounded mb-2 border border-slate-600">
+            <div class="flex items-center gap-4">
+                <div class="text-xs text-slate-400">MODE</div>
+                <div class="text-yellow-400 font-bold tracking-widest">{{ mode_label|default('WAITING') }}</div>
+            </div>
+            <div class="flex items-center gap-4">
+                <div class="text-xs text-slate-400">PROGRESS</div>
+                <div class="digital-font text-xl text-green-400">{{ total_answered|default(0) }} / {{ total_questions }} 問</div>
+            </div>
+        </div>
+
+        <div class="flex flex-grow gap-2">
+            <!-- 左パネル -->
+            <div class="w-1/3 glass-panel rounded-lg p-2 flex flex-col relative">
+                <div class="text-xs text-blue-300 mb-1 border-b border-blue-900/50 pb-1">STATUS MONITOR</div>
+                <div class="mb-4">
+                    <div class="text-[10px] text-slate-400">NEXT STATION</div>
+                    <div class="text-xl font-bold text-white truncate">{{ next_station|default('---') }}</div>
+                    <div class="w-full bg-slate-700 h-1 mt-1 rounded"><div class="bg-green-500 h-1 rounded" style="width: {{ progress|default(0) }}%"></div></div>
+                </div>
+                <div class="flex-grow flex items-center justify-center relative">
+                    <canvas id="speedometer" width="200" height="200" class="max-w-full max-h-full"></canvas>
+                    <div class="absolute bottom-0 text-center">
+                        <div class="digital-font text-4xl text-cyan-400" id="speedDisplay">0</div>
+                        <div class="text-[10px] text-slate-500">km/h</div>
+                    </div>
+                </div>
+                <div class="absolute top-2 right-2 text-xs" id="weatherIcon">☀️</div>
+            </div>
+
+            <!-- 右パネル -->
+            <div class="w-2/3 glass-panel rounded-lg p-4 flex flex-col relative monitor-scanline">
+                {% if state == 'quiz' %}
+                    <div class="flex-grow flex flex-col justify-center">
+                        <div class="text-blue-300 text-xs mb-2 font-mono">ID: {{ question.id }}</div>
+                        <h2 class="text-lg md:text-xl font-bold leading-relaxed text-white mb-6 drop-shadow-md">{{ question.question }}</h2>
+                        <form action="/answer" method="post" class="grid grid-cols-1 gap-2 overflow-y-auto max-h-[200px] pr-2 custom-scrollbar">
+                            <input type="hidden" name="client_speed" id="clientSpeedInput" value="0">
+                            <input type="hidden" name="got_landmark" id="gotLandmarkInput" value="0">
+                            {% for opt in question.options %}
+                            <button name="choice" value="{{ loop.index }}" onclick="submitAnswer(this)" class="w-full bg-slate-800/80 hover:bg-blue-600/50 border border-slate-600 hover:border-blue-400 text-left px-4 py-3 rounded text-sm transition-all duration-200 group">
+                                <span class="text-blue-400 mr-2 group-hover:text-white pointer-events-none">[{{ loop.index }}]</span><span class="pointer-events-none">{{ opt }}</span>
+                            </button>
+                            {% endfor %}
+                        </form>
+                    </div>
+                {% elif state == 'judgement' %}
+                     <div class="flex-grow flex flex-col items-center justify-center text-center">
+                        {% if is_correct %}
+                            <div class="text-green-400 text-6xl font-black mb-4 tracking-tighter drop-shadow-[0_0_10px_rgba(74,222,128,0.5)]">CLEAR</div>
+                            <div class="text-blue-200">加速します！</div>
+                        {% else %}
+                            <div class="text-red-500 text-6xl font-black mb-4 tracking-tighter">WARNING</div>
+                            <div class="text-xl font-bold text-white">{{ correct_answer_text }}</div>
+                             <!-- 追試メッセージ -->
+                            <div class="text-yellow-300 text-sm mt-2 font-bold animate-pulse">※この問題は再出題されます</div>
+                        {% endif %}
+                        <!-- 自動遷移用フォーム (非表示) -->
+                        <form id="nextForm" action="/next" method="post"></form>
+                        <div class="mt-4 text-xs text-slate-400 animate-pulse">NEXT QUESTION IN <span id="countdown">1.5</span>s...</div>
+                        
+                        <script>
+                            // 自動遷移スクリプト
+                            setTimeout(() => {
+                                document.getElementById('nextForm').submit();
+                            }, 1500);
+                        </script>
+                    </div>
+                {% elif state == 'station_arrival' %}
+                    <div class="flex-grow flex flex-col items-center justify-center text-center">
+                        <div class="text-4xl font-bold text-yellow-400 mb-2">{{ current_station }} ARRIVED</div>
+                        <div class="text-slate-400 mb-6">区間運行完了</div>
+                        
+                        <!-- モード選択・乗り換えUI -->
+                        <div class="w-full max-w-sm">
+                            <form action="/depart" method="post" class="space-y-3">
+                                {% if is_nozomi_station %}
+                                    <div class="text-sm text-yellow-300 font-bold mb-2">乗り換え案内: 運行モードを選択できます</div>
+                                    <button name="mode" value="shinkansen" class="w-full bg-blue-600 hover:bg-blue-500 text-white font-bold py-3 px-6 rounded shadow flex justify-between items-center group">
+                                        <span class="pointer-events-none">各駅停車で次へ</span> <span class="text-xs opacity-75 pointer-events-none">7問/区間</span>
+                                    </button>
+                                    <button name="mode" value="nozomi" class="w-full bg-yellow-500 hover:bg-yellow-400 text-slate-900 font-bold py-3 px-6 rounded shadow flex justify-between items-center group">
+                                        <span class="pointer-events-none">超特急のぞみで次へ</span> <span class="text-xs opacity-75 pointer-events-none">28問/区間</span>
+                                    </button>
+                                {% else %}
+                                    <button name="mode" value="shinkansen" class="w-full bg-green-600 hover:bg-green-500 text-white font-bold py-4 px-8 rounded shadow-lg">
+                                        次の駅へ出発
+                                    </button>
+                                {% endif %}
+                            </form>
+                            
+                            <!-- タイトルへ戻るボタン -->
+                            <a href="/" class="block mt-6 text-sm text-slate-500 hover:text-white underline">
+                                途中下車してタイトルへ戻る
+                            </a>
+                        </div>
+                    </div>
+                {% elif state == 'goal' %}
+                     <div class="flex-grow flex flex-col items-center justify-center">
+                        <div class="text-5xl font-black text-yellow-400 mb-4">MISSION COMPLETE</div>
+                        <div class="text-xl text-white mb-2">全問走破＆新函館北斗駅 到着</div>
+                        <div class="text-lg text-slate-300 mb-8">最終スコア: {{ score }} / {{ total_answered }} 問正解</div>
+                        <a href="/" class="bg-slate-700 hover:bg-slate-600 text-white py-2 px-6 rounded">タイトルへ戻る</a>
+                     </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    <script>
+        const canvas = document.getElementById('speedometer');
+        const ctx = canvas ? canvas.getContext('2d') : null;
+        let currentSpeed = {{ current_speed|default(0) }}, targetSpeed = {{ current_speed|default(0) }};
+        const hasLandmark = {{ 'true' if landmark else 'false' }};
+        const isTunnel = {{ 'true' if landmark and landmark.is_tunnel else 'false' }};
+        let landmarkCollected = false;
+
+        function drawSpeedometer() {
+            if (!ctx) return;
+            ctx.clearRect(0, 0, 200, 200);
+            const cx = 100, cy = 100, radius = 80;
+            ctx.beginPath(); ctx.arc(cx, cy, radius, 0.75 * Math.PI, 2.25 * Math.PI); ctx.lineWidth = 10; ctx.strokeStyle = '#1e293b'; ctx.stroke();
+            const maxSpeed = 350;
+            const speedAngle = (0.75 + (1.5 * (currentSpeed / maxSpeed))) * Math.PI;
+            ctx.beginPath(); ctx.moveTo(cx, cy); ctx.lineTo(cx + Math.cos(speedAngle)*(radius-10), cy + Math.sin(speedAngle)*(radius-10)); ctx.lineWidth = 4; ctx.strokeStyle = '#facc15'; ctx.stroke();
+            const display = document.getElementById('speedDisplay'); if(display) display.innerText = Math.round(currentSpeed);
+            updateEnvironment(currentSpeed);
+        }
+
+        function updateEnvironment(speed) {
+            const windowView = document.getElementById('windowView');
+            const rainEffect = document.getElementById('rainEffect');
+            const weatherIcon = document.getElementById('weatherIcon');
+            const landmarkLayer = document.getElementById('landmarkLayer');
+            const landmarkNotify = document.getElementById('landmarkGet');
+            const inputGotLandmark = document.getElementById('gotLandmarkInput');
+
+            if (isTunnel) {
+                windowView.classList.add('weather-tunnel'); if(weatherIcon) weatherIcon.innerText = "🚇";
+            } else {
+                if (speed < 100) {
+                    windowView.classList.add('weather-rainy'); rainEffect.style.opacity = 1; if(weatherIcon) weatherIcon.innerText = "☔️";
+                    if(landmarkLayer) landmarkLayer.style.opacity = 0.2;
+                } else {
+                    windowView.classList.remove('weather-rainy'); rainEffect.style.opacity = 0; if(weatherIcon) weatherIcon.innerText = "☀️";
+                    if(landmarkLayer) landmarkLayer.style.opacity = 1;
+                    if (hasLandmark && !landmarkCollected && speed > 200) {
+                        landmarkCollected = true;
+                        if(landmarkNotify) landmarkNotify.classList.remove('translate-x-full');
+                        if(inputGotLandmark) inputGotLandmark.value = "1";
+                        setTimeout(() => { if(landmarkNotify) landmarkNotify.classList.add('translate-x-full'); }, 3000);
+                    }
+                }
+            }
+        }
+
+        function animate() {
+            if (Math.abs(targetSpeed - currentSpeed) > 1) currentSpeed += (targetSpeed - currentSpeed) * 0.1; else currentSpeed = targetSpeed;
+            drawSpeedometer(); requestAnimationFrame(animate);
+        }
+        setInterval(() => {
+             const mt = document.getElementById('layerMountains'), bd = document.getElementById('layerBuildings'), se = document.getElementById('speedEffect');
+             if(!mt) return;
+             if(currentSpeed < 5) { mt.style.animationPlayState = 'paused'; bd.style.animationPlayState = 'paused'; se.style.opacity = 0; }
+             else { mt.style.animationPlayState = 'running'; bd.style.animationPlayState = 'running'; se.style.opacity = Math.min((currentSpeed - 100) / 200, 0.5);
+                 const factor = 300 / Math.max(currentSpeed, 10); bd.style.animationDuration = (0.5 * factor) + 's'; }
+        }, 100);
+        if (ctx) animate();
+        function submitAnswer(btn) { document.getElementById('clientSpeedInput').value = Math.round(currentSpeed); btn.innerHTML = "TRANSMITTING..."; }
+    </script>
+</body>
+</html>
+"""
+
+# ---------------------------------------------------------
+# 4. ルーティング & ゲームロジック
+# ---------------------------------------------------------
+
+@app.route('/')
+def index():
+    # ★修正: タイトルに戻ったら、コレクション以外のゲーム進行データをきれいサッパリ忘れるようにします！
+    # これで「やり直し」がきかないトラブルを解決できます✨
+    keys_to_remove = ['mode', 'current_station_idx', 'next_station_idx', 'score', 
+                      'current_speed', 'question_deck', 'quiz_queue', 'current_quiz_idx', 
+                      'question_start_time', 'total_answered_count']
+    for key in keys_to_remove:
+        session.pop(key, None)
+
+    collected = session.get('collected_landmarks', [])
+    return render_template_string(HTML_TEMPLATE, state='menu', current_speed=0, all_landmarks=LANDMARK_DATA, collected=collected, total_questions=len(ALL_QUESTIONS))
+
+@app.route('/start', methods=['POST'])
+def start_game():
+    # ★修正: フォームの値に変な空白が入っていても除去して受け取るように修正
+    # デバッグ用にログを出力
+    raw_mode = request.form.get('mode')
+    print(f"DEBUG: Start Game Request Mode = '{raw_mode}'")
+    
+    if raw_mode:
+        mode = raw_mode.strip()
+    else:
+        mode = 'shinkansen' # デフォルト
+        
+    session['mode'] = mode
+    session['current_station_idx'] = 0
+    session['score'] = 0
+    session['current_speed'] = 50
+    if 'collected_landmarks' not in session: session['collected_landmarks'] = []
+
+    # ★完走型ロジックの核：問題IDの山札（Deck）を作成してシャッフル
+    deck = list(range(len(ALL_QUESTIONS)))
+    random.shuffle(deck)
+    session['question_deck'] = deck
+    session['total_answered_count'] = 0 # 累計回答数
+    
+    set_next_destination(0, mode)
+    
+    # 最初の区間の問題を取得
+    prepare_next_leg_questions()
+    
+    session['current_quiz_idx'] = 0
+    session['question_start_time'] = time.time()
+    return redirect(url_for('play'))
+
+def set_next_destination(current_idx, mode):
+    next_idx = current_idx + 1
+    if mode == 'nozomi':
+        # ★修正: のぞみロジックをより確実に。
+        # 現在地より後で、最初に「is_nozomi=True」になる駅を探す
+        found = False
+        for i in range(current_idx + 1, len(STATION_DATA)):
+            if STATION_DATA[i]['is_nozomi']:
+                next_idx = i
+                found = True
+                break
+        # もし最後まで見つからなかったら終点（新函館北斗）へ
+        if not found:
+            next_idx = len(STATION_DATA) - 1
+            
+    session['next_station_idx'] = next_idx
+
+def prepare_next_leg_questions():
+    """山札から次の区間分の問題を取り出す"""
+    mode = session.get('mode')
+    count = 7 if mode == 'shinkansen' else 28
+    
+    deck = session.get('question_deck', [])
+    
+    # デッキから取り出す（足りない場合はあるだけ取り出す）
+    num_to_take = min(count, len(deck))
+    
+    if num_to_take == 0:
+        # もう問題がない場合 -> 空リスト
+        selected_indices = []
+    else:
+        selected_indices = deck[:num_to_take]
+        session['question_deck'] = deck[num_to_take:] # デッキ更新
+        
+    # インデックスから実際の問題データを取得
+    # ★修正: Cookie容量オーバー対策のため、セッションには「問題インデックスのリスト」のみを保存する
+    session['quiz_queue'] = selected_indices
+
+@app.route('/play')
+def play():
+    if 'quiz_queue' not in session: return redirect(url_for('index'))
+    queue = session['quiz_queue'] # ここはインデックスのリスト
+    idx = session['current_quiz_idx']
+    
+    # 区間クリア判定
+    if idx >= len(queue):
+        # もしデッキも空なら、ゲームクリア（ゴール）へ
+        if len(session.get('question_deck', [])) == 0:
+             return render_template_string(HTML_TEMPLATE, state='goal', score=session['score'], total_answered=session['total_answered_count'])
+        
+        # 現在の駅が「のぞみ停車駅」かどうかを判定してテンプレートへ渡す
+        current_station_data = STATION_DATA[session['next_station_idx']]
+        is_nozomi_station = current_station_data['is_nozomi']
+
+        return render_template_string(HTML_TEMPLATE, 
+            state='station_arrival',
+            current_station=current_station_data['name'],
+            score=session['score'], current_speed=0, total_questions=len(ALL_QUESTIONS), total_answered=session['total_answered_count'],
+            is_nozomi_station=is_nozomi_station
+        )
+    
+    current_st_idx = session['current_station_idx']
+    landmark = LANDMARK_DATA.get(current_st_idx)
+    session['question_start_time'] = time.time()
+    
+    # ★修正: インデックスを使ってマスターデータから問題を取得
+    q_index = queue[idx]
+    current_question = ALL_QUESTIONS[q_index]
+
+    return render_template_string(HTML_TEMPLATE,
+        state='quiz',
+        question=current_question,
+        mode_label="各駅停車" if session['mode'] == 'shinkansen' else "超特急のぞみ",
+        current_station=STATION_DATA[current_st_idx]['name'],
+        next_station=STATION_DATA[session['next_station_idx']]['name'],
+        score=session['score'],
+        progress=(idx / len(queue)) * 100,
+        current_speed=session.get('current_speed', 100),
+        landmark=landmark,
+        total_questions=len(ALL_QUESTIONS),
+        total_answered=session['total_answered_count'] + 1
+    )
+
+@app.route('/answer', methods=['POST'])
+def answer():
+    choice = int(request.form.get('choice'))
+    client_speed = int(request.form.get('client_speed', 0))
+    got_landmark_flag = request.form.get('got_landmark', '0')
+    queue = session['quiz_queue']
+    idx = session['current_quiz_idx']
+    
+    # ★修正: インデックスから問題を取得
+    q_index = queue[idx]
+    current_q = ALL_QUESTIONS[q_index]
+    
+    elapsed = time.time() - session.get('question_start_time', time.time())
+    is_correct = (choice == current_q['answer_idx'])
+    current_speed = client_speed
+    
+    if is_correct:
+        session['score'] += 1
+        speed_bonus = max(10, 50 - (elapsed * 2))
+        current_speed = min(320, current_speed + speed_bonus)
+    else:
+        current_speed = max(30, current_speed - 50)
+        # ★修正: 不正解なら問題をキューの末尾に追加（再出題） - インデックスを追加
+        queue.append(q_index)
+        session['quiz_queue'] = queue
+    
+    session['current_speed'] = current_speed
+    session['total_answered_count'] += 1 # 回答済みカウントアップ
+
+    landmark_info = LANDMARK_DATA.get(session['current_station_idx'])
+    if landmark_info and got_landmark_flag == "1":
+        collected = session.get('collected_landmarks', [])
+        l_id = str(session['current_station_idx'])
+        if l_id not in collected:
+            collected.append(l_id)
+            session['collected_landmarks'] = collected
+
+    return render_template_string(HTML_TEMPLATE,
+        state='judgement',
+        is_correct=is_correct,
+        correct_answer_text=current_q['options'][current_q['answer_idx']-1],
+        current_speed=current_speed,
+        total_questions=len(ALL_QUESTIONS),
+        total_answered=session['total_answered_count']
+    )
+
+@app.route('/next', methods=['POST'])
+def next_question():
+    session['current_quiz_idx'] += 1
+    return redirect(url_for('play'))
+
+@app.route('/depart', methods=['POST'])
+def depart():
+    # ★モード変更の処理（フォームから送信された場合のみ更新）
+    new_mode = request.form.get('mode')
+    if new_mode:
+        session['mode'] = new_mode
+
+    current_idx = session['next_station_idx']
+    session['current_station_idx'] = current_idx
+    
+    # 終点チェック or 問題切れチェック
+    deck_is_empty = (len(session.get('question_deck', [])) == 0)
+    
+    if current_idx >= len(STATION_DATA) - 1 or deck_is_empty:
+        return render_template_string(HTML_TEMPLATE, state='goal', score=session['score'], total_answered=session['total_answered_count'])
+    
+    # 更新されたモードで次の目的地を設定
+    set_next_destination(current_idx, session['mode'])
+    
+    # 次の問題セット補充（デッキから引く）
+    prepare_next_leg_questions()
+    
+    session['current_quiz_idx'] = 0
+    session['current_speed'] = 100
+    return redirect(url_for('play'))
+
+if __name__ == '__main__':
+    app.run(debug=True)
