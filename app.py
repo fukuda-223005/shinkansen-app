@@ -305,16 +305,48 @@ HTML_TEMPLATE = """
                         {% else %}
                             <div class="text-red-500 text-6xl font-black mb-4 tracking-tighter">WARNING</div>
                             <div class="text-xl font-bold text-white">{{ correct_answer_text }}</div>
-                             <!-- 追試メッセージ追加 -->
+                             <!-- 追試メッセージ -->
                             <div class="text-yellow-300 text-sm mt-2 font-bold animate-pulse">※この問題は再出題されます</div>
                         {% endif %}
-                        <div class="mt-8"><form action="/next" method="post"><button class="bg-blue-600 hover:bg-blue-500 text-white font-bold py-2 px-8 rounded animate-pulse">RESUME</button></form></div>
+                        <!-- 自動遷移用フォーム (非表示) -->
+                        <form id="nextForm" action="/next" method="post"></form>
+                        <div class="mt-4 text-xs text-slate-400 animate-pulse">NEXT QUESTION IN <span id="countdown">1.5</span>s...</div>
+                        
+                        <script>
+                            // 自動遷移スクリプト
+                            setTimeout(() => {
+                                document.getElementById('nextForm').submit();
+                            }, 1500);
+                        </script>
                     </div>
                 {% elif state == 'station_arrival' %}
-                    <div class="flex-grow flex flex-col items-center justify-center">
+                    <div class="flex-grow flex flex-col items-center justify-center text-center">
                         <div class="text-4xl font-bold text-yellow-400 mb-2">{{ current_station }} ARRIVED</div>
                         <div class="text-slate-400 mb-6">区間運行完了</div>
-                        <form action="/depart" method="post" class="mt-8"><button class="bg-green-600 hover:bg-green-500 text-white py-3 px-8 rounded font-bold">次駅へ出発</button></form>
+                        
+                        <!-- モード選択・乗り換えUI -->
+                        <div class="w-full max-w-sm">
+                            <form action="/depart" method="post" class="space-y-3">
+                                {% if is_nozomi_station %}
+                                    <div class="text-sm text-yellow-300 font-bold mb-2">乗り換え案内: 運行モードを選択できます</div>
+                                    <button name="mode" value="shinkansen" class="w-full bg-blue-600 hover:bg-blue-500 text-white font-bold py-3 px-6 rounded shadow flex justify-between items-center group">
+                                        <span>各駅停車で次へ</span> <span class="text-xs opacity-75">7問/区間</span>
+                                    </button>
+                                    <button name="mode" value="nozomi" class="w-full bg-yellow-500 hover:bg-yellow-400 text-slate-900 font-bold py-3 px-6 rounded shadow flex justify-between items-center group">
+                                        <span>超特急のぞみで次へ</span> <span class="text-xs opacity-75">28問/区間</span>
+                                    </button>
+                                {% else %}
+                                    <button name="mode" value="shinkansen" class="w-full bg-green-600 hover:bg-green-500 text-white font-bold py-4 px-8 rounded shadow-lg">
+                                        次の駅へ出発
+                                    </button>
+                                {% endif %}
+                            </form>
+                            
+                            <!-- タイトルへ戻るボタン -->
+                            <a href="/" class="block mt-6 text-sm text-slate-500 hover:text-white underline">
+                                途中下車してタイトルへ戻る
+                            </a>
+                        </div>
                     </div>
                 {% elif state == 'goal' %}
                      <div class="flex-grow flex flex-col items-center justify-center">
@@ -466,10 +498,15 @@ def play():
         if len(session.get('question_deck', [])) == 0:
              return render_template_string(HTML_TEMPLATE, state='goal', score=session['score'], total_answered=session['total_answered_count'])
         
+        # 現在の駅が「のぞみ停車駅」かどうかを判定してテンプレートへ渡す
+        current_station_data = STATION_DATA[session['next_station_idx']]
+        is_nozomi_station = current_station_data['is_nozomi']
+
         return render_template_string(HTML_TEMPLATE, 
             state='station_arrival',
-            current_station=STATION_DATA[session['next_station_idx']]['name'],
-            score=session['score'], current_speed=0, total_questions=len(ALL_QUESTIONS), total_answered=session['total_answered_count']
+            current_station=current_station_data['name'],
+            score=session['score'], current_speed=0, total_questions=len(ALL_QUESTIONS), total_answered=session['total_answered_count'],
+            is_nozomi_station=is_nozomi_station # ★追加
         )
     
     current_st_idx = session['current_station_idx']
@@ -540,6 +577,11 @@ def next_question():
 
 @app.route('/depart', methods=['POST'])
 def depart():
+    # ★モード変更の処理（フォームから送信された場合のみ更新）
+    new_mode = request.form.get('mode')
+    if new_mode:
+        session['mode'] = new_mode
+
     current_idx = session['next_station_idx']
     session['current_station_idx'] = current_idx
     
@@ -549,6 +591,7 @@ def depart():
     if current_idx >= len(STATION_DATA) - 1 or deck_is_empty:
         return render_template_string(HTML_TEMPLATE, state='goal', score=session['score'], total_answered=session['total_answered_count'])
     
+    # 更新されたモードで次の目的地を設定
     set_next_destination(current_idx, session['mode'])
     
     # 次の問題セット補充（デッキから引く）
